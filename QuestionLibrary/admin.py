@@ -48,9 +48,21 @@ class MasterQuestionAdmin(admin.ModelAdmin):
 
 
 class SurveyQuestionInline(admin.TabularInline):
-    model = SurveyQuestion
+    model = SurveyQuestionSet
+    # ordering = ['sort_order']
 
 
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
+    # ordering = ['sort_order']
+
+
+class QuestionSetInline(admin.TabularInline):
+    model = QuestionList
+
+
+@admin.register(QuestionSet)
+class QuestionSetAdmin(admin.ModelAdmin):
+    list_display = ['name', 'owner']
+    inlines = [QuestionSetInline]
