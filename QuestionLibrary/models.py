@@ -155,13 +155,13 @@ class Survey(models.Model):
         shutil.copy(template, output_survey)
         orig_survey_df = pd.read_excel(output_survey, sheet_name='survey')
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
-        assigned_questions = self.question_set.all()
+        assigned_questions = self.questions.all()
 
         questions = [
             {
                 'type': x.question.formatted_survey_field_type,
                 'name': x.question.formatted_survey_field_name,
-                'label': x.question.question,
+                'label': x.question.name,
                 'relevant': x.question.formatted_survey_field_relevant,
                 # 'media': x.question.media,
             } for x in assigned_questions
@@ -197,31 +197,29 @@ class Survey(models.Model):
 #     survey = models.ForeignKey('Survey', on_delete=models.PROTECT, related_name='questions')
 #     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT, unique=True)
 #     sort_order = models.IntegerField(null=True, blank=True)
-
-    # def __str__(self):
-    #     return self.question.question
+#
+#     def __str__(self):
+#         return self.question.question
 
 
 class SurveyQuestionSet(models.Model):
     survey = models.ForeignKey('Survey', on_delete=models.PROTECT, related_name='questions')
-    question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT, unique=True)
+    question_set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT, unique=True)
+
 
     def __str__(self):
-        return self.question.question
+        return self.question_set.name
 
 
 
 class QuestionSet(models.Model):
-    # survey = models.ForeignKey('Survey', on_delete=models.PROTECT, related_name='question_set')
     name = models.CharField(max_length=250)
     owner = models.CharField(max_length=250)
-    # question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT, unique=True)
-
 
 
 class QuestionList(models.Model):
-    set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT, unique=True)
-    question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT, unique=True)
+    set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT)
+    question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
 
     def __str__(self):
         return self.question.question
