@@ -204,7 +204,10 @@ class Survey(models.Model):
 
 class SurveyQuestionSet(models.Model):
     survey = models.ForeignKey('Survey', on_delete=models.PROTECT, related_name='questions')
-    question_set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT, unique=True)
+    question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT, unique=True)
+
+    def __str__(self):
+        return self.question.question
 
 
 
