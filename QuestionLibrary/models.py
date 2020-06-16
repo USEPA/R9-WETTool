@@ -95,6 +95,9 @@ class MasterQuestion(models.Model):
     # todo: add question hint
     # todo: is anything or everything required
 
+    def __str__(self):
+        return self.question
+
     @property
     def formatted_survey_field_type(self):
         if self.lookup is not None:
@@ -104,8 +107,6 @@ class MasterQuestion(models.Model):
         # return self.response_type.survey123_field_type.format(**values)
         return self.response_type.survey123_field_type
 
-    def __str__(self):
-        return self.question
 
     @property
     def formatted_survey_field_name(self):
@@ -134,11 +135,6 @@ class Survey(models.Model):
     facility_field = models.CharField(max_length=200)
     sub_facility_field = models.CharField(max_length=200)
 
-    # sort_order = models.IntegerField(null=True, blank=True)
-
-
-
-
     def __str__(self):
         return self.name
 
@@ -155,22 +151,22 @@ class Survey(models.Model):
         shutil.copy(template, output_survey)
         orig_survey_df = pd.read_excel(output_survey, sheet_name='survey')
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
-        assigned_questions = self.questions.all()
+        assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
 
         questions = [
             {
-                'type': x.question.formatted_survey_field_type,
-                'name': x.question.formatted_survey_field_name,
-                'label': x.question.name,
-                'relevant': x.question.formatted_survey_field_relevant,
-                # 'media': x.question.media,
+                'type': x.formatted_survey_field_type,
+                'name': x.formatted_survey_field_name,
+                'label': x.question,
+                'relevant': x.formatted_survey_field_relevant,
+                'media': x.media,
             } for x in assigned_questions
         ]
         questions_df = pd.DataFrame(questions)
 
         survey_df = orig_survey_df.append(questions_df)
 
-        assigned_lookups = Lookup.objects.filter(group__masterquestion__surveyquestion__survey=self).distinct()
+        assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
         choices = [
             {
                 'list_name': x.group.formatted_survey_name,
@@ -193,36 +189,17 @@ class Survey(models.Model):
     # todo: populate survey123 service with existing base data
 
 
-# class SurveyQuestion(models.Model):
-#     survey = models.ForeignKey('Survey', on_delete=models.PROTECT, related_name='questions')
-#     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT, unique=True)
-#     sort_order = models.IntegerField(null=True, blank=True)
-#
-#     def __str__(self):
-#         return self.question.question
-
-
-class SurveyQuestionSet(models.Model):
-    survey = models.ForeignKey('Survey', on_delete=models.PROTECT, related_name='questions')
-    question_set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT, unique=True)
-
-
-    def __str__(self):
-        return self.question_set.name
-
-
-
 class QuestionSet(models.Model):
     name = models.CharField(max_length=250)
     owner = models.CharField(max_length=250)
+    surveys = models.ManyToManyField('Survey', related_name='question_set')
+    questions = models.ManyToManyField('MasterQuestion', related_name='question_set', through='QuestionList')
 
 
 class QuestionList(models.Model):
     set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT)
     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
-
-    def __str__(self):
-        return self.question.question
+    active = models.BooleanField()
 
 
 

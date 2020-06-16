@@ -48,7 +48,7 @@ class MasterQuestionAdmin(admin.ModelAdmin):
 
 
 class SurveyQuestionInline(admin.TabularInline):
-    model = SurveyQuestionSet
+    model = QuestionSet.surveys.through
     # ordering = ['sort_order']
 
 
@@ -59,10 +59,11 @@ class SurveyAdmin(admin.ModelAdmin):
 
 
 class QuestionSetInline(admin.TabularInline):
-    model = QuestionList
+    model = QuestionSet.questions.through
 
 
 @admin.register(QuestionSet)
 class QuestionSetAdmin(admin.ModelAdmin):
     list_display = ['name', 'owner']
+    fields = ['name', 'owner']
     inlines = [QuestionSetInline]
