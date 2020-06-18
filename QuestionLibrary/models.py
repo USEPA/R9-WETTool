@@ -107,16 +107,15 @@ class MasterQuestion(models.Model):
         # return self.response_type.survey123_field_type.format(**values)
         return self.response_type.survey123_field_type
 
-
     @property
     def formatted_survey_field_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
 
     @property
     def formatted_survey_field_relevant(self):
+        if self.question == "Media":
+            return
         return f"${{media}}='{self.media.label}'"
-
-
 
 
 class Survey(models.Model):
@@ -195,13 +194,11 @@ class QuestionSet(models.Model):
     surveys = models.ManyToManyField('Survey', related_name='question_set')
     questions = models.ManyToManyField('MasterQuestion', related_name='question_set', through='QuestionList')
 
+    def __str__(self):
+        return self.name
+
 
 class QuestionList(models.Model):
     set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT)
     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
-    active = models.BooleanField()
-
-
-
-
-
+    active = models.BooleanField(default=True)

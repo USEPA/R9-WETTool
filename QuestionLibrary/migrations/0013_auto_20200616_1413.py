@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('QuestionLibrary', '0012_surveyquestion_sort_order'),
+        ('QuestionLibrary', '0010_auto_20200608_1310'),
     ]
 
     operations = [
