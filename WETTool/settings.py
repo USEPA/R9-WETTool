@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from . import local_settings
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -37,7 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'QuestionLibrary'
+    'QuestionLibrary',
+    'agol_oauth2',
+    'social_django'
 ]
 
 MIDDLEWARE = [
@@ -130,3 +133,22 @@ STATIC_URL = '/static/'
 
 XLS_FORM_TEMPLATE = 'survey123_template.xlsx'
 
+SOCIAL_AUTH_AGOL_KEY = local_settings.SOCIAL_AUTH_AGOL_KEY
+SOCIAL_AUTH_AGOL_SECRET = local_settings.SOCIAL_AUTH_AGOL_SECRET
+SOCIAL_AUTH_AGOL_DOMAIN = 'epa.maps.arcgis.com'
+
+SOCIAL_AUTH_PIPELINE = [  # Note: Sequence of functions matters here.
+    'social_core.pipeline.social_auth.social_details',  # 0
+    'social_core.pipeline.social_auth.social_uid',  # 1
+    'social_core.pipeline.social_auth.auth_allowed',  # 2
+    'social_core.pipeline.social_auth.social_user',  # 3
+    'social_core.pipeline.user.get_username',  # 4
+    'agol_oauth2.pipeline.associate_by_username',
+    'social_core.pipeline.social_auth.associate_user',  # 6
+    'social_core.pipeline.social_auth.load_extra_data',  # 7
+    'social_core.pipeline.user.user_details',
+]
+
+AUTHENTICATION_BACKENDS= local_settings.AUTHENTICATION_BACKENDS
+
+LOGIN_REDIRECT_URL = '/admin/'

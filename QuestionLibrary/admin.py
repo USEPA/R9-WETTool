@@ -58,6 +58,10 @@ class SurveyAdmin(admin.ModelAdmin):
     # ordering = ['sort_order']
 
 
+ # todo: add a method that checks to see if the map service url has been provided
+ # todo: upon save, go out to the url and get the service properties and put them in the service config field
+ # create class method and pass in user from request
+
 class QuestionSetInline(admin.TabularInline):
     model = QuestionSet.questions.through
 
@@ -67,3 +71,11 @@ class QuestionSetAdmin(admin.ModelAdmin):
     list_display = ['name', 'owner']
     fields = ['name', 'owner']
     inlines = [QuestionSetInline]
+
+
+# class JobsInlines(admin.TabularInline):
+#     model = Survey
+#
+# @admin.register(Job)
+# class JobsAdmin(admin.ModelAdmin):
+#     inlines = [JobsInlines]

@@ -134,6 +134,9 @@ class Survey(models.Model):
     facility_field = models.CharField(max_length=200)
     sub_facility_field = models.CharField(max_length=200)
 
+    # create a method here create_service properties // on save gets the service properties and saves it
+    # then generate incorpate the properties saved from the service
+
     def __str__(self):
         return self.name
 
@@ -151,6 +154,8 @@ class Survey(models.Model):
         orig_survey_df = pd.read_excel(output_survey, sheet_name='survey')
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
         assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
+        # active_question = MasterQuestion.objects.filter(question_set__questions=self)
+
 
         questions = [
             {
@@ -202,3 +207,10 @@ class QuestionList(models.Model):
     set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT)
     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
     active = models.BooleanField(default=True)
+
+
+# class Job(models.Model):
+#     name = models.CharField(max_length=250)
+#     job_date = models.DateTimeField()
+#     job_due_date = models.DateTimeField()
+#     assessment = models.ManyToManyField('Survey')
