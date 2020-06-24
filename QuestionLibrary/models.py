@@ -202,6 +202,7 @@ class QuestionSet(models.Model):
     def __str__(self):
         return self.name
 
+    # todo: change the surveys many to many field back to a relationship table
 
 class QuestionList(models.Model):
     set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT)

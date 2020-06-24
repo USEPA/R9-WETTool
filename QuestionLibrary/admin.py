@@ -1,5 +1,10 @@
 from django.contrib import admin
 from .models import *
+from social_django.utils import load_strategy
+from django.contrib.auth.models import User
+import requests
+
+
 
 
 @admin.register(Media)
@@ -56,6 +61,22 @@ class SurveyQuestionInline(admin.TabularInline):
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
     # ordering = ['sort_order']
+
+    def getMapService(self):
+        v = User.objects.first()
+        social = v.social_auth.get(provider='agol')
+        token = social.get_access_token(load_strategy())
+
+        if Survey.objects.get(map_service = None):
+            map_service = Survey.objects.get('map_service')
+            r = requests.get(url=map_service, params={'token': token, 'f': 'json'})
+
+
+
+    def saveSurvery(self, request, obj, form, change):
+
+        obj.user = request.user
+        super().save_model(request, obj, form, change)
 
 
  # todo: add a method that checks to see if the map service url has been provided
