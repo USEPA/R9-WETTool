@@ -60,26 +60,12 @@ class SurveyQuestionInline(admin.TabularInline):
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
-    # ordering = ['sort_order']
 
-    def getMapService(self):
-        v = User.objects.first()
-        social = v.social_auth.get(provider='agol')
-        token = social.get_access_token(load_strategy())
-
-        if Survey.objects.get(map_service = None):
-            map_service = Survey.objects.get('map_service')
-            r = requests.get(url=map_service, params={'token': token, 'f': 'json'})
-
-
-
-    def saveSurvery(self, request, obj, form, change):
-
-        obj.user = request.user
+    def save_model(self, request, obj, form, change):
+        # obj.user = request.user
+        obj.getMapService(request.user)
         super().save_model(request, obj, form, change)
 
-
- # todo: add a method that checks to see if the map service url has been provided
  # todo: upon save, go out to the url and get the service properties and put them in the service config field
  # create class method and pass in user from request
 

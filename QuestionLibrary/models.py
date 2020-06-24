@@ -4,6 +4,9 @@ import shutil
 import pandas as pd
 import os
 import re
+from social_django.utils import load_strategy
+from django.contrib.auth.models import User
+import requests
 
 # todo: move to model
 responses = (
@@ -128,7 +131,7 @@ class Survey(models.Model):
     # todo: limit the results of the data source to only select a subset.  This is for creating preload survey
 
     # store the fields from the service locally for reference in forms?
-    service_config = models.TextField()
+    service_config = models.TextField(null=True, blank=True)
     # todo: these should be select lists from service_config
     media_field = models.CharField(max_length=200)
     facility_field = models.CharField(max_length=200)
@@ -185,6 +188,16 @@ class Survey(models.Model):
             survey_df.to_excel(writer, sheet_name='survey', index=False)
             choices_df.to_excel(writer, sheet_name='choices', index=False)
         # return questions_df, choices_df
+
+
+
+    def getMapService(self, user):
+        if not self.service_config:
+            social = user.social_auth.get(provider='agol')
+            token = social.get_access_token(load_strategy())
+            r = requests.get(url=self.map_service, params={'token': token, 'f': 'json'})
+            self.service_config = r.json()['fields']
+
 
     class Meta:
         verbose_name = "Assessment"
