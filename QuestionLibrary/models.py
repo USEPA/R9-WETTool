@@ -6,7 +6,7 @@ import os
 import re
 from social_django.utils import load_strategy
 from django.contrib.auth.models import User
-import requests
+import requests, json
 
 # todo: move to model
 responses = (
@@ -157,7 +157,17 @@ class Survey(models.Model):
         orig_survey_df = pd.read_excel(output_survey, sheet_name='survey')
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
         assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
-        # active_question = MasterQuestion.objects.filter(question_set__questions=self)
+        # config = self.service_config.replace("\'", "\"")
+        feat_service = json.loads(self.service_config)
+
+        fields = [
+            {
+                'type': x['type'],
+                'name': x['name'],
+                'label': x['alias']
+            } for x in feat_service['fields']
+        ]
+        field_df = pd.DataFrame(fields)
 
 
         questions = [
@@ -166,12 +176,12 @@ class Survey(models.Model):
                 'name': x.formatted_survey_field_name,
                 'label': x.question,
                 'relevant': x.formatted_survey_field_relevant,
-                'media': x.media,
+                # 'media': x.media,
             } for x in assigned_questions
         ]
         questions_df = pd.DataFrame(questions)
-
-        survey_df = orig_survey_df.append(questions_df)
+        survey_df_all = [questions_df, field_df]
+        survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
         choices = [
@@ -196,7 +206,12 @@ class Survey(models.Model):
             social = user.social_auth.get(provider='agol')
             token = social.get_access_token(load_strategy())
             r = requests.get(url=self.map_service, params={'token': token, 'f': 'json'})
-            self.service_config = r.json()['fields']
+            self.service_config = r.text
+
+
+    def formatted_survey_field_type(self):
+        feat_service = json.loads(self.service_config)
+       #todo deal with fieldtypes coming across from feature service
 
 
     class Meta:
