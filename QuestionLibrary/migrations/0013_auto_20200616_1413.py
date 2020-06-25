@@ -26,21 +26,9 @@ class Migration(migrations.Migration):
                 ('owner', models.CharField(max_length=250)),
             ],
         ),
-        migrations.CreateModel(
-            name='SurveyQuestionSet',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('question_set', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='QuestionLibrary.QuestionList', unique=True)),
-            ],
-        ),
         migrations.AlterModelOptions(
             name='survey',
             options={'verbose_name': 'Assessment'},
-        ),
-        migrations.AddField(
-            model_name='surveyquestionset',
-            name='survey',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='questions', to='QuestionLibrary.Survey'),
         ),
         migrations.AddField(
             model_name='questionlist',

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.db.models import F
 import shutil
 import pandas as pd
 import os
@@ -7,16 +8,6 @@ import re
 from social_django.utils import load_strategy
 from django.contrib.auth.models import User
 import requests, json
-
-# todo: move to model
-responses = (
-    ('yes', 'Yes/No'),
-    ('no', 'Memo'),
-    ('maybe', 'Integer'),
-    ('maybe', 'Double'),
-    ('maybe', 'Integer/Lookup'),
-    ('maybe', 'Notes'),
-)
 
 
 class LookupAbstract(models.Model):
@@ -76,6 +67,22 @@ class Unit(LookupAbstract):
     pass
 
 
+class FeatureServiceResponse(models.Model):
+    fs_response_type = models.CharField(max_length=250)
+    esri_field_type = models.CharField(max_length=250)
+
+    def __str__(self):
+        return self.fs_response_type
+
+
+#
+#
+# class FeatureServiceResponseType(FeatureServiceResponse):
+#     pass
+#
+#     esri_field_type = models.CharField(max_length=250)
+
+
 class MasterQuestion(models.Model):
     question = models.TextField(max_length=1000)
 
@@ -127,6 +134,7 @@ class Survey(models.Model):
     # perhaps this is a url to a published service?
     # this way the data doesn't even need to be on same machine or network. could even be in agol
     map_service = models.URLField()
+
     # the querying the service based on extent or values would be much more straight forward
     # todo: limit the results of the data source to only select a subset.  This is for creating preload survey
 
@@ -157,18 +165,16 @@ class Survey(models.Model):
         orig_survey_df = pd.read_excel(output_survey, sheet_name='survey')
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
         assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
-        # config = self.service_config.replace("\'", "\"")
         feat_service = json.loads(self.service_config)
 
         fields = [
             {
-                'type': x['type'],
+                'type': FeatureServiceResponse.objects.get(fs_response_type=x['type']).esri_field_type,
                 'name': x['name'],
                 'label': x['alias']
             } for x in feat_service['fields']
         ]
         field_df = pd.DataFrame(fields)
-
 
         questions = [
             {
@@ -176,7 +182,6 @@ class Survey(models.Model):
                 'name': x.formatted_survey_field_name,
                 'label': x.question,
                 'relevant': x.formatted_survey_field_relevant,
-                # 'media': x.media,
             } for x in assigned_questions
         ]
         questions_df = pd.DataFrame(questions)
@@ -199,8 +204,6 @@ class Survey(models.Model):
             choices_df.to_excel(writer, sheet_name='choices', index=False)
         # return questions_df, choices_df
 
-
-
     def getMapService(self, user):
         if not self.service_config:
             social = user.social_auth.get(provider='agol')
@@ -208,17 +211,19 @@ class Survey(models.Model):
             r = requests.get(url=self.map_service, params={'token': token, 'f': 'json'})
             self.service_config = r.text
 
+    # @property
+    # def formatted_fs_field_type(self, x):
+    #     feat_service = json.loads(self.service_config)
+    #     if x['type'] == FeatureServiceResponse.objects.get(fs_response_type=x['type']).esri_field_type:
 
-    def formatted_survey_field_type(self):
-        feat_service = json.loads(self.service_config)
-       #todo deal with fieldtypes coming across from feature service
 
 
-    class Meta:
-        verbose_name = "Assessment"
 
-    # todo: figure out how to publish survey123. it might have to be manual
-    # todo: populate survey123 service with existing base data
+class Meta:
+    verbose_name = "Assessment"
+
+# todo: figure out how to publish survey123. it might have to be manual
+# todo: populate survey123 service with existing base data
 
 
 class QuestionSet(models.Model):
@@ -232,11 +237,11 @@ class QuestionSet(models.Model):
 
     # todo: change the surveys many to many field back to a relationship table
 
+
 class QuestionList(models.Model):
     set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT)
     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
     active = models.BooleanField(default=True)
-
 
 # class Job(models.Model):
 #     name = models.CharField(max_length=250)

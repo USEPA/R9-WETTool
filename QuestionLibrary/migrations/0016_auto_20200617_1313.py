@@ -10,18 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='surveyquestionset',
-            name='question_set',
-        ),
-        migrations.RemoveField(
-            model_name='surveyquestionset',
-            name='survey',
-        ),
-        migrations.RemoveField(
-            model_name='survey',
-            name='sort_order',
-        ),
         migrations.AddField(
             model_name='questionset',
             name='questions',
@@ -31,11 +19,5 @@ class Migration(migrations.Migration):
             model_name='questionset',
             name='surveys',
             field=models.ManyToManyField(related_name='question_set', to='QuestionLibrary.Survey'),
-        ),
-        migrations.DeleteModel(
-            name='SurveyQuestion',
-        ),
-        migrations.DeleteModel(
-            name='SurveyQuestionSet',
         ),
     ]

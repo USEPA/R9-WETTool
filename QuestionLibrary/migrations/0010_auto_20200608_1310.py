@@ -16,9 +16,4 @@ class Migration(migrations.Migration):
             name='sort_order',
             field=models.IntegerField(blank=True, null=True),
         ),
-        migrations.AlterField(
-            model_name='surveyquestion',
-            name='question',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='QuestionLibrary.MasterQuestion', unique=True),
-        ),
     ]

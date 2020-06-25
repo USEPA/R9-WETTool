@@ -36,6 +36,9 @@ class ResponseTypeAdmin(admin.ModelAdmin):
 class UnitAdmin(admin.ModelAdmin):
     pass
 
+@admin.register(FeatureServiceResponse)
+class FeatureServiceResponseAdmin(admin.ModelAdmin):
+    pass
 
 class LookupInline(admin.TabularInline):
     model = Lookup
