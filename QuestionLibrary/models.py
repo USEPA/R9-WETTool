@@ -8,6 +8,8 @@ import re
 from social_django.utils import load_strategy
 from django.contrib.auth.models import User
 import requests, json
+from django.core.exceptions import ValidationError
+
 
 
 class LookupAbstract(models.Model):
@@ -107,6 +109,14 @@ class MasterQuestion(models.Model):
 
     def __str__(self):
         return self.question
+    #
+    # def response_clean(self):
+    #     response = self.('response_type')
+    #
+    #     if response == self.cleaned_data.get('lookup'):
+    #         # self.fields_required(['lookup'])
+    #         raise ValidationError('Lookup is required.')
+    #     return self.cleaned_data.get('lookup')
 
     @property
     def formatted_survey_field_type(self):
@@ -140,13 +150,10 @@ class Survey(models.Model):
 
     # store the fields from the service locally for reference in forms?
     service_config = models.TextField(null=True, blank=True)
-    # todo: these should be select lists from service_config
-    media_field = models.CharField(max_length=200)
-    facility_field = models.CharField(max_length=200)
-    sub_facility_field = models.CharField(max_length=200)
 
-    # create a method here create_service properties // on save gets the service properties and saves it
-    # then generate incorpate the properties saved from the service
+    media = models.ForeignKey('Media', on_delete=models.PROTECT)
+    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
+    sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
 
     def __str__(self):
         return self.name
@@ -211,19 +218,11 @@ class Survey(models.Model):
             r = requests.get(url=self.map_service, params={'token': token, 'f': 'json'})
             self.service_config = r.text
 
-    # @property
-    # def formatted_fs_field_type(self, x):
-    #     feat_service = json.loads(self.service_config)
-    #     if x['type'] == FeatureServiceResponse.objects.get(fs_response_type=x['type']).esri_field_type:
-
-
-
 
 class Meta:
     verbose_name = "Assessment"
 
 # todo: figure out how to publish survey123. it might have to be manual
-# todo: populate survey123 service with existing base data
 
 
 class QuestionSet(models.Model):
