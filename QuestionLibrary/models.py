@@ -11,7 +11,6 @@ import requests, json
 from django.core.exceptions import ValidationError
 
 
-
 class LookupAbstract(models.Model):
     label = models.CharField(max_length=50)
     description = models.CharField(max_length=500, null=True, blank=True)
@@ -109,14 +108,7 @@ class MasterQuestion(models.Model):
 
     def __str__(self):
         return self.question
-    #
-    # def response_clean(self):
-    #     response = self.('response_type')
-    #
-    #     if response == self.cleaned_data.get('lookup'):
-    #         # self.fields_required(['lookup'])
-    #         raise ValidationError('Lookup is required.')
-    #     return self.cleaned_data.get('lookup')
+
 
     @property
     def formatted_survey_field_type(self):
@@ -189,10 +181,22 @@ class Survey(models.Model):
                 'name': x.formatted_survey_field_name,
                 'label': x.question,
                 'relevant': x.formatted_survey_field_relevant,
+                'units': x.units
             } for x in assigned_questions
         ]
         questions_df = pd.DataFrame(questions)
-        survey_df_all = [questions_df, field_df]
+
+        if assigned_questions.units is not None:
+            grouped_units = questions_df.groupby(['name', 'units'])
+            # eg m1 = (df['SibSp'] > 0) | (df['Parch'] > 0)
+            #
+            # df = df.groupby(np.where(m1, 'Has Family', 'No Family'))['Survived'].mean()
+            # p
+            #need to figure out how to append the grouped units to the sheet
+
+            #what is the value field that is being input by the user?
+
+        survey_df_all = [questions_df.groupby(['name', 'units']), field_df]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
@@ -221,6 +225,7 @@ class Survey(models.Model):
 
 class Meta:
     verbose_name = "Assessment"
+
 
 # todo: figure out how to publish survey123. it might have to be manual
 
