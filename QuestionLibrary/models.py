@@ -167,10 +167,10 @@ class Survey(models.Model):
 
         fields = [
             {
-                'type': FeatureServiceResponse.objects.get(fs_response_type=x['type']).esri_field_type,
-                'name': x['name'],
-                'label': x['alias']
-            } for x in feat_service['fields']
+                'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                'name': y['name'],
+                'label': y['alias']
+            } for x in feat_service for y in x['fields']
         ]
         field_df = pd.DataFrame(fields)
 
@@ -183,13 +183,6 @@ class Survey(models.Model):
                 'units': x.units
             } for x in assigned_questions
         ]
-
-        # add all questions to a begin group if the question has a specified unit,
-        # if questions_df[['units']] is not None:
-        #   add a row to the excel spreadsheet that has
-        # begin group as type / Group Validation = name /
-        # inside the group, add the question and a new field units?
-        # if questions_df[['units']] is not None:
 
         questions_df = pd.DataFrame(questions)
         survey_df_all = [questions_df, field_df]
@@ -212,15 +205,15 @@ class Survey(models.Model):
         # return questions_df, choices_df
 
     def getMapService(self, user):
-        layers = []
         if not self.service_config:
+            layers = []
             social = user.social_auth.get(provider='agol')
             token = social.get_access_token(load_strategy())
             r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
             for x in r.json()['layers']:
                 q = requests.get(url=self.base_map_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
                 layers.append(q.json())
-            self.service_config = layers
+            self.service_config = json.dumps(layers)
 
 
 class Meta:
