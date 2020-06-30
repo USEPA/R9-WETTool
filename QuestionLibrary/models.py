@@ -196,8 +196,19 @@ class Survey(models.Model):
                 'label': x.description,
             } for x in assigned_lookups
         ]
+        fs_lookup = FeatureServiceResponse.objects.all().distinct()
+        fs_choices = [
+            {
+                'list_name': x.esri_field_type,
+                'name': x.esri_field_type,
+                'label': x.fs_response_type
+
+            }for x in fs_lookup
+        ]
         lookups_df = pd.DataFrame(choices)
-        choices_df = orig_choices_df.append(lookups_df)
+        fs_lookups_df = pd.DataFrame(fs_choices)
+        lookups_all = [lookups_df, fs_lookups_df]
+        choices_df = orig_choices_df.append(lookups_all)
 
         with pd.ExcelWriter(output_survey, mode='w') as writer:
             survey_df.to_excel(writer, sheet_name='survey', index=False)
