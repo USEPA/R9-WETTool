@@ -88,6 +88,7 @@ class SurveyAdmin(admin.ModelAdmin):
 
 class QuestionSetInline(admin.TabularInline):
     model = QuestionSet.questions.through
+    ordering = ['sort_order']
 
 
 @admin.register(QuestionSet)
@@ -95,6 +96,7 @@ class QuestionSetAdmin(admin.ModelAdmin):
     list_display = ['name', 'owner']
     fields = ['name', 'owner']
     inlines = [QuestionSetInline]
+
 
 # class JobsInlines(admin.TabularInline):
 #     model = Survey

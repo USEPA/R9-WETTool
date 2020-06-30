@@ -101,14 +101,13 @@ class MasterQuestion(models.Model):
     # todo: does question active make sense in here or just in the survey itself?
     question_active = models.BooleanField(default=True)
 
-    sort_order = models.IntegerField(null=True, blank=True)
+    # sort_order = models.IntegerField(null=True, blank=True)
 
     # todo: add question hint
     # todo: is anything or everything required
 
     def __str__(self):
         return self.question
-
 
     @property
     def formatted_survey_field_type(self):
@@ -135,7 +134,7 @@ class Survey(models.Model):
     # todo: determine how to select this and then make fields available for matching to category values
     # perhaps this is a url to a published service?
     # this way the data doesn't even need to be on same machine or network. could even be in agol
-    map_service = models.URLField()
+    base_map_service = models.URLField()
 
     # the querying the service based on extent or values would be much more straight forward
     # todo: limit the results of the data source to only select a subset.  This is for creating preload survey
@@ -184,19 +183,16 @@ class Survey(models.Model):
                 'units': x.units
             } for x in assigned_questions
         ]
+
+        # add all questions to a begin group if the question has a specified unit,
+        # if questions_df[['units']] is not None:
+        #   add a row to the excel spreadsheet that has
+        # begin group as type / Group Validation = name /
+        # inside the group, add the question and a new field units?
+        # if questions_df[['units']] is not None:
+
         questions_df = pd.DataFrame(questions)
-
-        if assigned_questions.units is not None:
-            grouped_units = questions_df.groupby(['name', 'units'])
-            # eg m1 = (df['SibSp'] > 0) | (df['Parch'] > 0)
-            #
-            # df = df.groupby(np.where(m1, 'Has Family', 'No Family'))['Survived'].mean()
-            # p
-            #need to figure out how to append the grouped units to the sheet
-
-            #what is the value field that is being input by the user?
-
-        survey_df_all = [questions_df.groupby(['name', 'units']), field_df]
+        survey_df_all = [questions_df, field_df]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
@@ -216,11 +212,15 @@ class Survey(models.Model):
         # return questions_df, choices_df
 
     def getMapService(self, user):
+        layers = []
         if not self.service_config:
             social = user.social_auth.get(provider='agol')
             token = social.get_access_token(load_strategy())
-            r = requests.get(url=self.map_service, params={'token': token, 'f': 'json'})
-            self.service_config = r.text
+            r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
+            for x in r.json()['layers']:
+                q = requests.get(url=self.base_map_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
+                layers.append(q.json())
+            self.service_config = layers
 
 
 class Meta:
@@ -235,6 +235,7 @@ class QuestionSet(models.Model):
     owner = models.CharField(max_length=250)
     surveys = models.ManyToManyField('Survey', related_name='question_set')
     questions = models.ManyToManyField('MasterQuestion', related_name='question_set', through='QuestionList')
+    sort_order = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -246,6 +247,7 @@ class QuestionList(models.Model):
     set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT)
     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
     active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(null=True, blank=True)
 
 # class Job(models.Model):
 #     name = models.CharField(max_length=250)
