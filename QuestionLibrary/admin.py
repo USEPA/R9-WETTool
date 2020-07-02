@@ -52,7 +52,7 @@ class LookupGroupAdmin(admin.ModelAdmin):
 class QuestionFieldVal(ModelForm):
 
     def clean_lookup(self):
-        if self.cleaned_data.get('response_type', None) and not self.cleaned_data.get('lookup',):
+        if LookupGroup.objects.filter(label=self.cleaned_data.get('response_type', None)).exists() and not self.cleaned_data.get('lookup', None):
             print('junk')
             raise ValidationError('Select proper Lookup')
         return self.cleaned_data.get('lookup', None)

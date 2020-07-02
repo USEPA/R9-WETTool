@@ -118,6 +118,8 @@ class MasterQuestion(models.Model):
         # return self.response_type.survey123_field_type.format(**values)
         return self.response_type.survey123_field_type
 
+
+
     @property
     def formatted_survey_field_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
@@ -165,6 +167,7 @@ class Survey(models.Model):
         assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
         feat_service = json.loads(self.service_config)
 
+
         fields = [
             {
                 'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
@@ -172,7 +175,9 @@ class Survey(models.Model):
                 'label': y['alias']
             } for x in feat_service for y in x['fields']
         ]
+
         field_df = pd.DataFrame(fields)
+        field_df_drop_dups = field_df.drop_duplicates()
 
         questions = [
             {
@@ -185,7 +190,7 @@ class Survey(models.Model):
         ]
 
         questions_df = pd.DataFrame(questions)
-        survey_df_all = [questions_df, field_df]
+        survey_df_all = [questions_df, field_df_drop_dups]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
