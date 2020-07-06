@@ -185,7 +185,7 @@ class Survey(models.Model):
                 'name': x.formatted_survey_field_name,
                 'label': x.question,
                 'relevant': x.formatted_survey_field_relevant,
-                'units': x.units
+                # 'units': x.units
             } for x in assigned_questions
         ]
 
@@ -229,6 +229,10 @@ class Survey(models.Model):
             for x in r.json()['layers']:
                 q = requests.get(url=self.base_map_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
                 layers.append(q.json())
+            for f in r.json()['tables']:
+                q = requests.get(url=self.base_map_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
+                layers.append(q.json())
+
             self.service_config = json.dumps(layers)
 
 
