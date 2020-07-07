@@ -50,6 +50,10 @@ class LookupGroupAdmin(admin.ModelAdmin):
 
 
 class QuestionFieldVal(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(QuestionFieldVal, self).__init__(*args, **kwargs)
+        self.fields['default_unit'].queryset = Lookup.objects.filter(group=self.instance.lookup)
+
 
     def clean_lookup(self):
         if LookupGroup.objects.filter(label=self.cleaned_data.get('response_type', None)).exists() and not self.cleaned_data.get('lookup', None):
@@ -65,6 +69,11 @@ class QuestionFieldVal(ModelForm):
 class MasterQuestionAdmin(admin.ModelAdmin):
     form = QuestionFieldVal
     list_filter = ['category__media']
+    #
+    # def formfield_for_foreignkey(self, db_field, request, **kwargs):
+    #     if db_field.name == "default_unit":
+    #         kwargs["queryset"] = Lookup.objects.all()
+    #     return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 class SurveyQuestionInline(admin.TabularInline):

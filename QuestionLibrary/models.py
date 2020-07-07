@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 
 
 class LookupAbstract(models.Model):
-    label = models.CharField(max_length=50)
+    label = models.CharField(max_length=50, help_text='This is a test')
     description = models.CharField(max_length=500, null=True, blank=True)
 
     def __str__(self):
@@ -76,14 +76,6 @@ class FeatureServiceResponse(models.Model):
         return self.fs_response_type
 
 
-#
-#
-# class FeatureServiceResponseType(FeatureServiceResponse):
-#     pass
-#
-#     esri_field_type = models.CharField(max_length=250)
-
-
 class MasterQuestion(models.Model):
     question = models.TextField(max_length=1000)
 
@@ -91,15 +83,14 @@ class MasterQuestion(models.Model):
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
     category = models.ForeignKey('Category', on_delete=models.PROTECT)
     response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT)
-
-    # todo: triggers creation of second field for survey generation if not none
-    units = models.ForeignKey('Unit', on_delete=models.PROTECT, null=True, blank=True)
-
-    # todo: make required if response_type is lookup
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True)
+    # todo: triggers creation of second field for survey generation if not none
+    default_unit = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True, help_text='To set a default vales ..... etc')
+
+
 
     # todo: does question active make sense in here or just in the survey itself?
-    question_active = models.BooleanField(default=True)
+    # question_active = models.BooleanField(default=True)
 
     # sort_order = models.IntegerField(null=True, blank=True)
 
@@ -137,6 +128,7 @@ class Survey(models.Model):
     # perhaps this is a url to a published service?
     # this way the data doesn't even need to be on same machine or network. could even be in agol
     base_map_service = models.URLField()
+    survey123_service = models.URLField(null=True)
 
     # the querying the service based on extent or values would be much more straight forward
     # todo: limit the results of the data source to only select a subset.  This is for creating preload survey
@@ -144,9 +136,9 @@ class Survey(models.Model):
     # store the fields from the service locally for reference in forms?
     service_config = models.TextField(null=True, blank=True)
 
-    media = models.ForeignKey('Media', on_delete=models.PROTECT)
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
-    sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
+    # media = models.ForeignKey('Media', on_delete=models.PROTECT)
+    # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
+    # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
 
     def __str__(self):
         return self.name
@@ -236,8 +228,8 @@ class Survey(models.Model):
             self.service_config = json.dumps(layers)
 
 
-class Meta:
-    verbose_name = "Assessment"
+    class Meta:
+        verbose_name = "Assessment"
 
 
 # todo: figure out how to publish survey123. it might have to be manual
