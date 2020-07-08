@@ -133,7 +133,7 @@ class MasterQuestion(models.Model):
                     'label': 'Measure'
                 },
                 {
-                    'type': f'select_one {self.lookup}',
+                    'type': f'select_one {self.lookup.label}',
                     'name': f'{self.formatted_survey_field_name}_choices',
                     'label': self.lookup.description,
                     'default': getattr(self.default_unit, 'label', None)
@@ -200,37 +200,13 @@ class Survey(models.Model):
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
 
-        group_header = [
-            {
-                'type': 'begin_group',
-                'name': 'begin_group',
-                'label': x.question
-            } for x in assigned_questions if LookupGroup.objects.filter(label=x.lookup)
-        ]
-        group_df = pd.DataFrame(group_header)
-        end_group = {'type': 'end group'}
-        for row in group_df['type']:
-            if row == 'begin_group':
-                group_df.append(end_group, ignore_index=True)
-
         questions = []
         for x in assigned_questions:
             questions.extend(x.get_formatted_question())
 
-        # if questions has units
-        # label = x.question
-        # type = begin_group
-        # name = begin_group
-        # add 2 new fields:
-        # label = Value
-        # type = integer
-        # name = value
-        # label = Units
-        # type = select_one (lookup)
-        # name = units
 
         questions_df = pd.DataFrame(questions)
-        survey_df_all = [questions_df, group_df, field_df_drop_dups]
+        survey_df_all = [questions_df, field_df_drop_dups]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
