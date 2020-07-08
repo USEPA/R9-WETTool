@@ -85,9 +85,8 @@ class MasterQuestion(models.Model):
     response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT)
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True)
     # todo: triggers creation of second field for survey generation if not none
-    default_unit = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True, help_text='To set a default vales ..... etc')
-
-
+    default_unit = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True,
+                                     help_text='To set a default vales ..... etc')
 
     # todo: does question active make sense in here or just in the survey itself?
     # question_active = models.BooleanField(default=True)
@@ -102,14 +101,12 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_field_type(self):
-        if self.lookup is not None:
+        if self.response_type.survey123_field_type == 'select_one':
             return f"{self.response_type.survey123_field_type} {self.lookup.formatted_survey_name}"
         # could add more here but nothing useful I can see right now
         # values = {'list_name': self.lookup.formatted_survey_name}
         # return self.response_type.survey123_field_type.format(**values)
         return self.response_type.survey123_field_type
-
-
 
     @property
     def formatted_survey_field_name(self):
@@ -120,6 +117,39 @@ class MasterQuestion(models.Model):
         if self.question == "Media":
             return
         return f"${{media}}='{self.media.label}'"
+
+    def get_formatted_question(self):
+        # must always return a list
+        if self.lookup is not None and self.response_type.survey123_field_type != 'select_one':
+            return [{
+                'type': 'begin_group',
+                'name': self.formatted_survey_field_name,
+                'label': self.question,
+                'relevant': self.formatted_survey_field_relevant,
+            },
+                {
+                    'type': self.formatted_survey_field_type,
+                    'name': f'{self.formatted_survey_field_name}_measure',
+                    'label': 'Measure'
+                },
+                {
+                    'type': f'select_one {self.lookup}',
+                    'name': f'{self.formatted_survey_field_name}_choices',
+                    'label': self.lookup.description,
+                    'default': getattr(self.default_unit, 'label', None)
+                },
+                {
+                    'type': 'end group'
+                }
+
+            ]
+
+        return [{
+            'type': self.formatted_survey_field_type,
+            'name': self.formatted_survey_field_name,
+            'label': self.question,
+            'relevant': self.formatted_survey_field_relevant,
+        }]
 
 
 class Survey(models.Model):
@@ -159,7 +189,6 @@ class Survey(models.Model):
         assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
         feat_service = json.loads(self.service_config)
 
-
         fields = [
             {
                 'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
@@ -171,18 +200,37 @@ class Survey(models.Model):
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
 
-        questions = [
+        group_header = [
             {
-                'type': x.formatted_survey_field_type,
-                'name': x.formatted_survey_field_name,
-                'label': x.question,
-                'relevant': x.formatted_survey_field_relevant,
-                # 'units': x.units
-            } for x in assigned_questions
+                'type': 'begin_group',
+                'name': 'begin_group',
+                'label': x.question
+            } for x in assigned_questions if LookupGroup.objects.filter(label=x.lookup)
         ]
+        group_df = pd.DataFrame(group_header)
+        end_group = {'type': 'end group'}
+        for row in group_df['type']:
+            if row == 'begin_group':
+                group_df.append(end_group, ignore_index=True)
+
+        questions = []
+        for x in assigned_questions:
+            questions.extend(x.get_formatted_question())
+
+        # if questions has units
+        # label = x.question
+        # type = begin_group
+        # name = begin_group
+        # add 2 new fields:
+        # label = Value
+        # type = integer
+        # name = value
+        # label = Units
+        # type = select_one (lookup)
+        # name = units
 
         questions_df = pd.DataFrame(questions)
-        survey_df_all = [questions_df, field_df_drop_dups]
+        survey_df_all = [questions_df, group_df, field_df_drop_dups]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
@@ -200,7 +248,7 @@ class Survey(models.Model):
                 'name': x.esri_field_type,
                 'label': x.fs_response_type
 
-            }for x in fs_lookup
+            } for x in fs_lookup
         ]
         lookups_df = pd.DataFrame(choices)
         fs_lookups_df = pd.DataFrame(fs_choices)
@@ -226,7 +274,6 @@ class Survey(models.Model):
                 layers.append(q.json())
 
             self.service_config = json.dumps(layers)
-
 
     class Meta:
         verbose_name = "Assessment"
