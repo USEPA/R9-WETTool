@@ -257,7 +257,7 @@ class Survey(models.Model):
                 if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
                     fields.append({
                         'type': 'hidden',
-                        'name': y['name'],
+                        'name': f"{y['name']}_{x['name']}",
                         'label': y['alias'],
                         'bind::esri:fieldType': y['type']
 
@@ -265,7 +265,7 @@ class Survey(models.Model):
                 else:
                     fields.append({
                         'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                        'name': y['name'],
+                        'name': f"{y['name']}_{x['name']}",
                         'label': y['alias']
                     })
 
