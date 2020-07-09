@@ -270,7 +270,7 @@ class Survey(models.Model):
                         'type': 'hidden',
                         'name': y['name'],
                         'label': y['alias'],
-                        'bind::esri: fieldType': y['type']
+                        'bind::esri:fieldType': y['type']
 
                     }),
                 else:
