@@ -188,14 +188,23 @@ class Survey(models.Model):
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
         assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
         feat_service = json.loads(self.service_config)
+        fields = self.get_formatted_fields()
 
-        fields = [
-            {
-                'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                'name': y['name'],
-                'label': y['alias']
-            } for x in feat_service for y in x['fields']
-        ]
+        # for x in feat_service:
+        #     for y in x['fields']:
+        #         if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+        #             return [{
+        #                 'type': 'hidden',
+        #                 'name': y['name'],
+        #                 'label': y['alias'],
+        #                 'bind::esri: fieldType': y['type']
+        #
+        #             }],
+        #         return [{
+        #             'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+        #             'name': y['name'],
+        #             'label': y['alias']
+        #         }]
 
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
@@ -203,7 +212,6 @@ class Survey(models.Model):
         questions = []
         for x in assigned_questions:
             questions.extend(x.get_formatted_question())
-
 
         questions_df = pd.DataFrame(questions)
         survey_df_all = [questions_df, field_df_drop_dups]
@@ -251,8 +259,32 @@ class Survey(models.Model):
 
             self.service_config = json.dumps(layers)
 
-    class Meta:
-        verbose_name = "Assessment"
+    def get_formatted_fields(self):
+        feat_service = json.loads(self.service_config)
+        fields = []
+
+        for x in feat_service:
+            for y in x['fields']:
+                if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+                    fields.append({
+                        'type': 'hidden',
+                        'name': y['name'],
+                        'label': y['alias'],
+                        'bind::esri: fieldType': y['type']
+
+                    }),
+                else:
+                    fields.append({
+                        'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                        'name': y['name'],
+                        'label': y['alias']
+                    })
+
+        return fields
+
+
+class Meta:
+    verbose_name = "Assessment"
 
 
 # todo: figure out how to publish survey123. it might have to be manual
