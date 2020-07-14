@@ -240,10 +240,10 @@ class Survey(models.Model):
             token = social.get_access_token(load_strategy())
             r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
             for x in r.json()['layers']:
-                q = requests.get(url=self.base_map_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
+                q = requests.get(url=self.base_map_service + '/' + str(x['id']), params={'token': token, "where": "OBJECTID is not Null", "outFields": "*", 'f': 'json'})
                 layers.append(q.json())
             for f in r.json()['tables']:
-                q = requests.get(url=self.base_map_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
+                q = requests.get(url=self.base_map_service + '/' + str(f['id']), params={'token': token, "where": "OBJECTID is not Null", "outFields": "*", 'f': 'json', })
                 layers.append(q.json())
 
             self.service_config = json.dumps(layers)
