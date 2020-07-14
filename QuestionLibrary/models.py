@@ -114,7 +114,7 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_category_field_relevant(self):
-        return f"${{facility_type}}='{self.category.facility_type.label}'"
+        return f"${{base_facility_inventory_facility_type}}='{self.category.facility_type.label}'"
 
     @property
     def formatted_survey_media_field_relevant(self):
@@ -240,10 +240,10 @@ class Survey(models.Model):
             token = social.get_access_token(load_strategy())
             r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
             for x in r.json()['layers']:
-                q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query', params={"where": "OBJECTID is not Null", "outFields": "*", 'token': token, 'f': 'json'})
+                q = requests.get(url=self.base_map_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
                 layers.append(q.json())
             for f in r.json()['tables']:
-                q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query', params={"where": "OBJECTID is not Null", "outFields": "*", 'token': token, 'f': 'json'})
+                q = requests.get(url=self.base_map_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
                 layers.append(q.json())
 
             self.service_config = json.dumps(layers)
@@ -257,7 +257,7 @@ class Survey(models.Model):
                 if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
                     fields.append({
                         'type': 'hidden',
-                        'name': f"{y['name']}_{x['name']}",
+                        'name': f"{x['name'].lower().replace(' ', '_')}_{y['name']}",
                         'label': y['alias'],
                         'bind::esri:fieldType': y['type']
 
@@ -265,15 +265,15 @@ class Survey(models.Model):
                 else:
                     fields.append({
                         'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                        'name': f"{y['name']}_{x['name']}",
+                        'name': f"{x['name'].lower().replace(' ', '_')}_{y['name']}",
                         'label': y['alias']
                     })
 
         return fields
 
 
-    class Meta:
-        verbose_name = "Assessment"
+class Meta:
+    verbose_name = "Assessment"
 
 
 # todo: figure out how to publish survey123. it might have to be manual
