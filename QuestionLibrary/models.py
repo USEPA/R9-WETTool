@@ -248,6 +248,21 @@ class Survey(models.Model):
 
             self.service_config = json.dumps(layers)
 
+    def getBaseAttributes(self, user):
+        if not self.service_config:
+            layers = []
+            social = user.social_auth.get(provider='agol')
+            token = social.get_access_token(load_strategy())
+            r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
+            for x in r.json()['layers']:
+                q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query', params={"where": "OBJECTID is not Null", "outFields": "*", 'token': token, 'f': 'json'})
+                layers.append(q.json())
+            for f in r.json()['tables']:
+                q = requests.get(url=self.base_map_service + '/' + str(f['id'])+ '/query', params={"where": "OBJECTID is not Null", "outFields": "*", 'token': token, 'f': 'json'})
+                layers.append(q.json())
+
+            self.service_config = json.dumps(layers)
+
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
         fields = []
@@ -255,18 +270,12 @@ class Survey(models.Model):
         for x in feat_service:
             for y in x['fields']:
                 if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                    fields.append({
-                        'type': 'hidden',
-                        'name': f"{x['name'].lower().replace(' ', '_')}_{y['name']}",
-                        'label': y['alias'],
-                        'bind::esri:fieldType': y['type']
-
-                    }),
+                    pass
                 else:
                     fields.append({
                         'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
                         'name': f"{x['name'].lower().replace(' ', '_')}_{y['name']}",
-                        'label': y['alias']
+                        'label': f"{x['name'].lower().replace(' ', '_')}_{y['alias']}"
                     })
 
         return fields
