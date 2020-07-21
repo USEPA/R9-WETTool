@@ -261,6 +261,21 @@ class Survey(models.Model):
                 q = requests.get(url=self.base_map_service + '/' + str(f['id'])+ '/query', params={"where": "OBJECTID is not Null", "outFields": "*", 'token': token, 'f': 'json'})
                 layers.append(q.json())
 
+            self.service_config = json.dump
+
+    def getSurveyService(self, user):
+        if not self.service_config:
+            layers = []
+            social = user.social_auth.get(provider='agol')
+            token = social.get_access_token(load_strategy())
+            r = requests.get(url=self.survey123_service, params={'token': token, 'f': 'json'})
+            for x in r.json()['layers']:
+                q = requests.get(url=self.survey123_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
+                layers.append(q.json())
+            for f in r.json()['tables']:
+                q = requests.get(url=self.survey123_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
+                layers.append(q.json())
+
             self.service_config = json.dumps(layers)
 
     def get_formatted_fields(self):
