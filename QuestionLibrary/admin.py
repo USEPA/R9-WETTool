@@ -88,6 +88,7 @@ class SurveyAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         # obj.user = request.user
         obj.getMapService(request.user)
+        obj.getBaseAttributes(request.user)
         super().save_model(request, obj, form, change)
 
 

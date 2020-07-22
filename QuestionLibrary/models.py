@@ -260,8 +260,10 @@ class Survey(models.Model):
             for f in r.json()['tables']:
                 q = requests.get(url=self.base_map_service + '/' + str(f['id'])+ '/query', params={"where": "OBJECTID is not Null", "outFields": "*", 'token': token, 'f': 'json'})
                 layers.append(q.json())
+            return layers
 
-            self.service_config = json.dump
+
+
 
     def getSurveyService(self, user):
         if not self.service_config:
@@ -275,8 +277,7 @@ class Survey(models.Model):
             for f in r.json()['tables']:
                 q = requests.get(url=self.survey123_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
                 layers.append(q.json())
-
-            self.service_config = json.dumps(layers)
+            return layers
 
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
