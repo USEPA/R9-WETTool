@@ -296,8 +296,8 @@ class Survey(models.Model):
         return fields
 
 
-class Meta:
-    verbose_name = "Assessment"
+    class Meta:
+        verbose_name = "Assessment"
 
 
 # todo: figure out how to publish survey123. it might have to be manual
