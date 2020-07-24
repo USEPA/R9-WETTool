@@ -114,13 +114,13 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_category_field_relevant(self):
-        return f"${{base_facility_inventory_facility_type}}='{self.category.facility_type.label}'"
+        return f"${{base_facility_inventory_Fac_Type}}='{self.category.facility_type.label}'"
 
     @property
     def formatted_survey_media_field_relevant(self):
         if self.question == "Media":
             return
-        return f"${{media}}='{self.media.label}'"
+        return f"${{Media}}='{self.media.label}'"
 
     def get_formatted_question(self):
         # must always return a list
@@ -232,10 +232,9 @@ class Survey(models.Model):
             choices_df.to_excel(writer, sheet_name='choices', index=False)
         # return questions_df, choices_df
 
-    def formattedFieldName(self,x,y):
+    def formattedFieldName(self, x, y):
 
         return f"{x['name'].lower().replace(' ', '_')}_{y['name']}"
-
 
     def getMapService(self, user):
         if not self.service_config:
@@ -258,6 +257,12 @@ class Survey(models.Model):
         token = social.get_access_token(load_strategy())
         r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
         for x in r.json()['layers']:
+            count = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
+                                 params={"where": "1=1", "outFields": "*", "returnCountOnly": "true", 'token': token,
+                                         'f': 'json'})
+
+
+            print(count)
             q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
                              params={"where": "1=1", "outFields": "*", 'token': token, 'f': 'json'})
             attributes.append(q.json()['features'])
@@ -294,7 +299,7 @@ class Survey(models.Model):
                     fields.append({
                         'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
                         'name': self.formattedFieldName(x, y),
-                        'label': f"{x['name'].lower().replace(' ', '_')}_{y['alias']}"
+                        'label': y['alias']
                     })
 
         return fields
