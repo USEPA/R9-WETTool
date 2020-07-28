@@ -122,6 +122,17 @@ class MasterQuestion(models.Model):
             return
         return f"${{Media}}='{self.media.label}'"
 
+    @property
+    def formatted_survey_bwn_date_field_relevant(self):
+        if self.question == "On what date was the BWN issued?":
+            return
+        return f"${{boil_water_notice}}='yes'"
+    @property
+    def formatted_survey_bwn_redacted_field_relevant(self):
+        if self.question == "On what date was the BWN redacted?":
+            return
+        return f"${{boil_water_notice}}='yes'"
+
     def get_formatted_question(self):
         # must always return a list
         if self.lookup is not None and self.response_type.survey123_field_type != 'select_one':
