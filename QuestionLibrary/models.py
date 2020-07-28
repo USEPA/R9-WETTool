@@ -122,17 +122,17 @@ class MasterQuestion(models.Model):
             return
         return f"${{Media}}='{self.media.label}'"
 
-    @property
-    def formatted_survey_bwn_date_field_relevant(self):
-        if self.question == "On what date was the BWN issued?":
-            return
-        return f"${{boil_water_notice}}='yes'"
-
-    @property
-    def formatted_survey_bwn_redacted_field_relevant(self):
-        if self.question == "On what date was the BWN redacted?":
-            return
-        return f"${{boil_water_notice}}='yes'"
+    # @property
+    # def formatted_survey_bwn_date_field_relevant(self):
+    #     if self.question == "On what date was the BWN issued?":
+    #         return
+    #     return f"${{boil_water_notice}}='yes'"
+    #
+    # @property
+    # def formatted_survey_bwn_redacted_field_relevant(self):
+    #     if self.question == "On what date was the BWN redacted?":
+    #         return
+    #     return f"${{boil_water_notice}}='yes'"
 
     def get_formatted_question(self):
         # must always return a list
@@ -261,14 +261,9 @@ class Survey(models.Model):
     def getMapService(self, user):
         if not self.service_config:
             self.getLayers(user=user, service=self.base_map_service)
-            # # for x in r.json()['layers']:
-            # #     q = requests.get(url=self.survey123_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
-            # #     layers.append(q.json())
-            # for f in r.json()['tables']:
-            #     q = requests.get(url=self.base_map_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
-            #     layers.append(q.json())
-            #
-            # self.service_config = json.dumps(layers)
+
+    def getSurveyService(self, user):
+        self.getLayers(user=user, service=self.survey123_service)
 
     def getBaseAttributes(self, user):
         attributes = []
@@ -280,9 +275,17 @@ class Survey(models.Model):
                                  params={"where": "1=1", "outFields": "*", "returnCountOnly": "true", 'token': token,
                                          'f': 'json'})
 
-            print(count)
+            print(count.json())
+            result_offset = 0
+
+            if count.json()['count'] > 100:
+                result_offset = count.json()['count'] / 100
+
+            print(result_offset)
+
             q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
-                             params={"where": "1=1", "outFields": "*", 'token': token, 'f': 'json'})
+                             params={"where": "1=1", "result_offset": result_offset, "outFields": "*", 'token': token,
+                                     'f': 'json'})
             attributes.append(q.json()['features'])
         for f in r.json()['tables']:
             q = requests.get(url=self.base_map_service + '/' + str(f['id']) + '/query',
@@ -291,17 +294,6 @@ class Survey(models.Model):
             print(attributes)
 
         return attributes
-
-    def getSurveyService(self, user):
-        layers = []
-        social = user.social_auth.get(provider='agol')
-        token = social.get_access_token(load_strategy())
-        r = requests.get(url=self.survey123_service, params={'token': token, 'f': 'json'})
-        self.getLayers(r=r, layers=layers, token=token)
-        for f in r.json()['tables']:
-            q = requests.get(url=self.survey123_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
-            layers.append(q.json())
-        return layers
 
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
