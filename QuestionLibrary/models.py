@@ -127,6 +127,7 @@ class MasterQuestion(models.Model):
         if self.question == "On what date was the BWN issued?":
             return
         return f"${{boil_water_notice}}='yes'"
+
     @property
     def formatted_survey_bwn_redacted_field_relevant(self):
         if self.question == "On what date was the BWN redacted?":
@@ -244,8 +245,13 @@ class Survey(models.Model):
         # return questions_df, choices_df
 
     def formattedFieldName(self, x, y):
-
         return f"{x['name'].lower().replace(' ', '_')}_{y['name']}"
+
+    def getLayers(self, x, token):
+        layers = []
+        q = requests.get(url=self.base_map_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
+        layers.append(q.json())
+        return layers
 
     def getMapService(self, user):
         if not self.service_config:
@@ -254,69 +260,71 @@ class Survey(models.Model):
             token = social.get_access_token(load_strategy())
             r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
             for x in r.json()['layers']:
-                q = requests.get(url=self.base_map_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
-                layers.append(q.json())
+                self.getLayers(x, token)
             for f in r.json()['tables']:
                 q = requests.get(url=self.base_map_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
                 layers.append(q.json())
 
             self.service_config = json.dumps(layers)
 
-    def getBaseAttributes(self, user):
-        attributes = []
-        social = user.social_auth.get(provider='agol')
-        token = social.get_access_token(load_strategy())
-        r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
-        for x in r.json()['layers']:
-            count = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
-                                 params={"where": "1=1", "outFields": "*", "returnCountOnly": "true", 'token': token,
-                                         'f': 'json'})
+
+def getBaseAttributes(self, user):
+    attributes = []
+    social = user.social_auth.get(provider='agol')
+    token = social.get_access_token(load_strategy())
+    r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
+    for x in r.json()['layers']:
+        count = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
+                             params={"where": "1=1", "outFields": "*", "returnCountOnly": "true", 'token': token,
+                                     'f': 'json'})
+
+        print(count)
+        q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
+                         params={"where": "1=1", "outFields": "*", 'token': token, 'f': 'json'})
+        attributes.append(q.json()['features'])
+    for f in r.json()['tables']:
+        q = requests.get(url=self.base_map_service + '/' + str(f['id']) + '/query',
+                         params={"where": "1=1", "outFields": "*", 'token': token, 'f': 'json'})
+        attributes.append(q.json())
+        print(attributes)
+
+    return attributes
 
 
-            print(count)
-            q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
-                             params={"where": "1=1", "outFields": "*", 'token': token, 'f': 'json'})
-            attributes.append(q.json()['features'])
-        for f in r.json()['tables']:
-            q = requests.get(url=self.base_map_service + '/' + str(f['id']) + '/query',
-                             params={"where": "1=1", "outFields": "*", 'token': token, 'f': 'json'})
-            attributes.append(q.json())
-            print(attributes)
+def getSurveyService(self, user):
+    layers = []
+    social = user.social_auth.get(provider='agol')
+    token = social.get_access_token(load_strategy())
+    r = requests.get(url=self.survey123_service, params={'token': token, 'f': 'json'})
+    for x in r.json()['layers']:
+        q = requests.get(url=self.survey123_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
+        layers.append(q.json())
+    for f in r.json()['tables']:
+        q = requests.get(url=self.survey123_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
+        layers.append(q.json())
+    return layers
 
-        return attributes
 
-    def getSurveyService(self, user):
-        layers = []
-        social = user.social_auth.get(provider='agol')
-        token = social.get_access_token(load_strategy())
-        r = requests.get(url=self.survey123_service, params={'token': token, 'f': 'json'})
-        for x in r.json()['layers']:
-            q = requests.get(url=self.survey123_service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
-            layers.append(q.json())
-        for f in r.json()['tables']:
-            q = requests.get(url=self.survey123_service + '/' + str(f['id']), params={'token': token, 'f': 'json'})
-            layers.append(q.json())
-        return layers
+def get_formatted_fields(self):
+    feat_service = json.loads(self.service_config)
+    fields = []
 
-    def get_formatted_fields(self):
-        feat_service = json.loads(self.service_config)
-        fields = []
+    for x in feat_service:
+        for y in x['fields']:
+            if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+                pass
+            else:
+                fields.append({
+                    'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                    'name': self.formattedFieldName(x, y),
+                    'label': y['alias']
+                })
 
-        for x in feat_service:
-            for y in x['fields']:
-                if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                    pass
-                else:
-                    fields.append({
-                        'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                        'name': self.formattedFieldName(x, y),
-                        'label': y['alias']
-                    })
+    return fields
 
-        return fields
 
-    class Meta:
-        verbose_name = "Assessment"
+class Meta:
+    verbose_name = "Assessment"
 
 
 # todo: figure out how to publish survey123. it might have to be manual
