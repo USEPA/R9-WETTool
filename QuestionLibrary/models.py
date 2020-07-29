@@ -244,8 +244,8 @@ class Survey(models.Model):
             choices_df.to_excel(writer, sheet_name='choices', index=False)
         # return questions_df, choices_df
 
-    def formattedFieldName(self, x, y):
-        return f"{x['name'].lower().replace(' ', '_')}_{y['name']}"
+    def formattedFieldName(self, layer_name, field_name):
+        return f"{layer_name.lower().replace(' ', '_')}_{field_name}"
 
     def getLayers(self, service, user):
         layers = []
@@ -266,7 +266,7 @@ class Survey(models.Model):
         self.getLayers(user=user, service=self.survey123_service)
 
     def getBaseAttributes(self, user):
-        attributes = []
+        features = []
         social = user.social_auth.get(provider='agol')
         token = social.get_access_token(load_strategy())
         r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
@@ -289,17 +289,11 @@ class Survey(models.Model):
             layer_name = x['name']
 
             for t in q.json()['features']:
-                for y in t['attributes']:
-                    attributes.append([
-                        f"{layer_name.lower().replace(' ', '_')}_{y}"
-                    ])
-
-            # for t in q.json()['features']:
-            #         attributes.append([
-            #             f"{layer_name.lower().replace(' ', '_')}_{t['attributes']}"
-            #         ])
-        print(attributes)
-        return attributes
+                feature = {'attributes': {}, 'geometry': t['geometry']}
+                for k, v in t['attributes'].items():
+                    feature['attributes'][self.formattedFieldName(layer_name, k)] = v
+                features.append(feature)
+        return features
 
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
@@ -312,7 +306,7 @@ class Survey(models.Model):
                 else:
                     fields.append({
                         'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                        'name': self.formattedFieldName(x, y),
+                        'name': self.formattedFieldName(x['name'], y['name']),
                         'label': y['alias']
                     })
 
