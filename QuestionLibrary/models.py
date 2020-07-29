@@ -286,19 +286,20 @@ class Survey(models.Model):
             q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
                              params={"where": "1=1", "result_offset": result_offset, "outFields": "*", 'token': token,
                                      'f': 'json'})
-
-            attributes.append(q.json()['features'])
             layer_name = x['name']
-            m_attributes = []
 
-            for t in attributes:
-                for m in t:
-                    for y in m['attributes']:
-                        m_attributes.append([
-                            {f"{layer_name.lower().replace(' ', '_')}_{y}"}
-                        ])
+            for t in q.json()['features']:
+                for y in t['attributes']:
+                    attributes.append([
+                        f"{layer_name.lower().replace(' ', '_')}_{y}"
+                    ])
 
-            return m_attributes
+            # for t in q.json()['features']:
+            #         attributes.append([
+            #             f"{layer_name.lower().replace(' ', '_')}_{t['attributes']}"
+            #         ])
+        print(attributes)
+        return attributes
 
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
