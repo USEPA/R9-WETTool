@@ -8,6 +8,8 @@ import re
 from social_django.utils import load_strategy
 from django.contrib.auth.models import User
 import requests, json
+from urllib.parse import urlencode
+from itertools import islice
 from django.core.exceptions import ValidationError
 
 
@@ -333,10 +335,14 @@ class Survey(models.Model):
         print(features)
         return features
 
-    # def postAttributes(self, user):
-    #     # survey = self.getSurveyService(user)
-    #     feat = self.getBaseAttributes(user)
-    #     q = requests.post(url=self.survey123_service, data=feat)
+    def postAttributes(self, user):
+        social = user.social_auth.get(provider='agol')
+        token = social.get_access_token(load_strategy())
+        feat = self.getBaseAttributes(user)
+        data = urlencode({"adds": json.dumps(feat)})
+        r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
+                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+
 
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
