@@ -329,6 +329,11 @@ class Survey(models.Model):
                         features.append(feature)
         return features
 
+    def pushAttributes(self, user):
+        survey = self.getSurveyService(user)
+        feat = self.getBaseAttributes(user)
+        q = requests.post(url=survey, data=feat)
+
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
         fields = []
