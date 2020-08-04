@@ -329,7 +329,7 @@ class Survey(models.Model):
                         features.append(feature)
         return features
 
-    def pushAttributes(self, user):
+    def postAttributes(self, user):
         # survey = self.getSurveyService(user)
         feat = self.getBaseAttributes(user)
         q = requests.post(url=self.survey123_service, data=feat)

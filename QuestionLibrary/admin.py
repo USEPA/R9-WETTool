@@ -85,6 +85,7 @@ class SurveyQuestionInline(admin.TabularInline):
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
 
+
     def save_model(self, request, obj, form, change):
         # obj.user = request.user
         obj.getMapService(request.user)
@@ -92,8 +93,8 @@ class SurveyAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-# todo: upon save, go out to the url and get the service properties and put them in the service config field
-# create class method and pass in user from request
+#todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
+
 
 class QuestionSetInline(admin.TabularInline):
     model = QuestionSet.questions.through
