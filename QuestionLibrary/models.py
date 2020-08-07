@@ -347,11 +347,26 @@ class Survey(models.Model):
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
         fields = []
+        omit_fields ={'FACID', 'FACdetailID' 'created_user', 'created_date',
+                       'AlternateTextID', 'SystemTextIDPublic', 'FederalSystemType',
+                       'last_edited_user', 'last_edited_user'}
 
         for x in feat_service:
             for y in x['fields']:
                 if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                    pass
+                    fields.append({
+                        'type': 'hidden',
+                        'name': self.formattedFieldName(x['name'], y['name']),
+                        'label': y['alias'],
+                        'bind::esri:fieldType': 'esriFieldTypeInteger'
+                    })
+                elif y['name'] in omit_fields:
+                    fields.append({
+                        'type': 'hidden',
+                        'name': self.formattedFieldName(x['name'], y['name']),
+                        'label': y['alias'],
+                        'bind::esri:fieldType': 'esriFieldTypeInteger'
+                    })
                 else:
                     fields.append({
                         'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
