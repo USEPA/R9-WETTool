@@ -134,8 +134,6 @@ class MasterQuestion(models.Model):
     #         return
     #     return f"${{boil_water_notice}}='yes'"
 
-
-
     def get_formatted_question(self):
         # must always return a list
         if self.lookup is not None and self.response_type.survey123_field_type != 'select_one':
@@ -176,7 +174,7 @@ class Survey(models.Model):
     # perhaps this is a url to a published service?
     # this way the data doesn't even need to be on same machine or network. could even be in agol
     base_map_service = models.URLField()
-    survey123_service = models.URLField(null=True)
+    survey123_service = models.URLField(null=True, blank=True)
 
     # the querying the service based on extent or values would be much more straight forward
     # todo: limit the results of the data source to only select a subset.  This is for creating preload survey
@@ -211,6 +209,15 @@ class Survey(models.Model):
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
 
+        layer = [{
+            'form_title': self.name,
+            'form_id': '',
+            'instance_name': 'concat("ID: " +${base_inventory_SystemID}, " ",  "System Name: "+${base_inventory_SystemName}, " ", "System Status: " + ${base_inventory_ActivityStatus})',
+
+        }]
+        settings_df = pd.DataFrame(layer)
+        # choices_df = orig_choices_df.append(settings_df)
+
         questions = []
         for x in assigned_questions:
             questions.extend(x.get_formatted_question())
@@ -244,6 +251,7 @@ class Survey(models.Model):
         with pd.ExcelWriter(output_survey, mode='w') as writer:
             survey_df.to_excel(writer, sheet_name='survey', index=False)
             choices_df.to_excel(writer, sheet_name='choices', index=False)
+            settings_df.to_excel(writer, sheet_name='settings', index=False)
         # return questions_df, choices_df
 
     def formattedFieldName(self, layer_name, field_name):
@@ -296,10 +304,10 @@ class Survey(models.Model):
                 layer_name = x['name']
 
                 object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
-                if len(object_ids)==0:
+                if len(object_ids) == 0:
                     break
                 else:
-                    result_offset+=10
+                    result_offset += 10
 
                 for related_layer in [y for y in x['relationships'] if y['role'] == 'esriRelRoleOrigin']:
                     related_responses[related_layer['name']] = requests.get(
@@ -313,16 +321,19 @@ class Survey(models.Model):
                     # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
 
                 for origin_feature in q.json()['features']:
-                # loop through relationships to get all features in all related layers
+                    # loop through relationships to get all features in all related layers
                     for related_layer_name, related_response in related_responses.items():
-                        related_features = [z['relatedRecords'][0] for z in related_response.json()['relatedRecordGroups']
+                        related_features = [z['relatedRecords'][0] for z in
+                                            related_response.json()['relatedRecordGroups']
                                             if z['objectId'] == origin_feature['attributes']['OBJECTID']]
                         for related_feature in related_features:
                             # todo: figure out where to pull geometry from... like froms base_facility_inventory... not the origin table
                             # this is fair dynamic but geometry needs to be captured correctly
                             # this should work correctly based on our current understanding of how the data is structured and fall back to
                             # the origin geometry if related records isn't the for some reason
-                            feature = {'attributes': {}, 'geometry': origin_feature.get('geometry', related_feature.get('geometry', None))}
+                            feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',
+                                                                                        related_feature.get('geometry',
+                                                                                                            None))}
 
                             for k, v in related_feature['attributes'].items():
                                 feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
@@ -331,8 +342,8 @@ class Survey(models.Model):
                                 feature['attributes'][self.formattedFieldName(layer_name, k)] = v
 
                             features.append(feature)
-                            print(feature)
-        print(features)
+                            # print(feature)
+        # print(features)
         return features
 
     def postAttributes(self, user):
@@ -343,15 +354,13 @@ class Survey(models.Model):
         r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
-
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
         fields = []
-        omit_fields ={'FACID', 'FACdetailID' 'created_user', 'created_date',
+        omit_fields = {'FACID', 'FACdetailID' 'created_user', 'created_date',
                        'AlternateTextID', 'SystemTextIDPublic', 'FederalSystemType',
                        'last_edited_user', 'last_edited_user'}
-        #todo do these need to be hidden or do the need to be left out completely
-
+        # todo do these need to be hidden or do the need to be left out completely
 
         for x in feat_service:
             for y in x['fields']:
@@ -360,14 +369,12 @@ class Survey(models.Model):
                         'type': 'hidden',
                         'name': self.formattedFieldName(x['name'], y['name']),
                         'label': y['alias'],
-                        'bind::esri:fieldType': 'esriFieldTypeInteger'
                     })
                 elif y['name'] in omit_fields:
                     fields.append({
                         'type': 'hidden',
                         'name': self.formattedFieldName(x['name'], y['name']),
                         'label': y['alias'],
-                        'bind::esri:fieldType': 'esriFieldTypeInteger'
                     })
                 else:
                     fields.append({
