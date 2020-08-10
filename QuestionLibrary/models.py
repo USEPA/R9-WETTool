@@ -350,6 +350,8 @@ class Survey(models.Model):
         omit_fields ={'FACID', 'FACdetailID' 'created_user', 'created_date',
                        'AlternateTextID', 'SystemTextIDPublic', 'FederalSystemType',
                        'last_edited_user', 'last_edited_user'}
+        #todo do these need to be hidden or do the need to be left out completely
+
 
         for x in feat_service:
             for y in x['fields']:
