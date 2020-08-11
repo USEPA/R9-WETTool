@@ -14,11 +14,19 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.conf import settings
 from django.urls import path, include
-
+from QuestionLibrary.views import EsriProxy
 admin.site.site_header = 'WET Tool'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('oauth2/', include('social_django.urls', namespace='social_django'))
+    path('oauth2/', include('social_django.urls', namespace='social_django')),
+    path('proxy/', EsriProxy.as_view())
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns = [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns

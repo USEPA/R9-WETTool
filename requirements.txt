@@ -1,6 +1,7 @@
 django-mssql-backend>=2.8.0,<2.8.99
-django>=3.0,<3.1.99
+django>=2.2,<2.2.99
 pandas
 openpyxl
 xlrd
 git+https://github.com/Innovate-Inc/django-agol-oauth2.git@master#egg=django-agol-oauth2==0.0.3
+django-debug-toolbar
