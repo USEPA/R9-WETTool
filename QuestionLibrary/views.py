@@ -9,38 +9,12 @@ import requests
 
 @method_decorator(login_required, name='dispatch')
 class EsriProxy(View):
-    # authentication_classes = (SessionAuthentication, TokenAuthSupportQueryString)
-
-    # def perform_content_negotiation(self, request, force=False):
-    #     """
-    #     override to always use default rendering
-    #     """
-    #     renderers = self.get_renderers()
-    #     # conneg = self.get_content_negotiator()
-
-        # return (renderers[0], renderers[0].media_type)
-
     def get_url(self, request):
         return request.META['QUERY_STRING'].split('?')[0]
 
     def get_token(self, request):
         social = request.user.social_auth.get(provider='agol')
         return social.get_access_token(load_strategy())
-
-        # now = dt.utcnow().replace(tzinfo=pytz.UTC)
-        # token_dict = cache.get('ARC_SERVER_TOKEN')
-        #
-        # if self.username and self.password and (token_dict is None or (not token_dict['token'] or token_dict['token_expiration'] < now)):
-        #
-        #     token_request = requests.post('https://epa.maps.arcgis.com/sharing/rest/generateToken',
-        #                                   data={'username': self.username, 'password': self.password,
-        #                                         'f': 'json', 'referer': self.request.headers['Origin']})
-        #     if token_request.status_code == requests.codes.ok:
-        #         expires = dt.utcfromtimestamp(token_request.json()['expires'] / 1000).replace(tzinfo=pytz.UTC)
-        #         token_dict = dict(token=token_request.json()['token'], token_expiration=expires)
-        #         cache.set('ARC_SERVER_TOKEN', token_dict)
-        #
-        # return token_dict['token']
 
     def handle_esri_response(self, response):
         return HttpResponse(
