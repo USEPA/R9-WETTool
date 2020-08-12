@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from social_django.utils import load_strategy
 import requests
+import urllib
 
 
 @method_decorator(login_required, name='dispatch')
@@ -86,7 +87,7 @@ class EsriProxy(View):
             token = self.get_token(request)
 
             # for posts the token goes in a header
-            r = requests.post(url, request.data, headers={"X-Esri-Authorization": f"Bearer {token}"})
+            r = requests.post(url, data=urllib.parse.unquote(request.body.decode('utf-8')), headers={"X-Esri-Authorization": f"Bearer {token}", "Content-Type": "application/x-www-form-urlencoded"})
             if r.status_code != requests.codes.ok:
                 return HttpResponse(status=r.status_code)
 

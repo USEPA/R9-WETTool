@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import *
-from django.forms import ModelForm, ModelChoiceField, CharField
+from django.forms import ModelForm, ModelChoiceField, CharField, HiddenInput
 from django.core.exceptions import ValidationError
 
 
@@ -81,10 +81,18 @@ class SurveyQuestionInline(admin.TabularInline):
     # ordering = ['sort_order']
 
 
+class SurveyAdminForm(ModelForm):
+    selected_features = CharField(widget=HiddenInput())
+
+    class Meta:
+        model = Survey
+        exclude = []
+
+
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
-
+    form = SurveyAdminForm
 
     def save_model(self, request, obj, form, change):
         # obj.user = request.user
