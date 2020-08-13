@@ -186,6 +186,8 @@ class Survey(models.Model):
     # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
     # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
 
+    selected_features = models.TextField(null=True, blank=True)
+
     def __str__(self):
         return self.name
 

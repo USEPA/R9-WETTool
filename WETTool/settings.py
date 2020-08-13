@@ -40,11 +40,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'QuestionLibrary',
     'agol_oauth2',
-    'social_django'
+    'social_django',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -58,8 +60,7 @@ ROOT_URLCONF = 'WETTool.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')]
-        ,
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -152,3 +153,7 @@ SOCIAL_AUTH_PIPELINE = [  # Note: Sequence of functions matters here.
 AUTHENTICATION_BACKENDS= local_settings.AUTHENTICATION_BACKENDS
 
 LOGIN_REDIRECT_URL = '/admin/'
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
