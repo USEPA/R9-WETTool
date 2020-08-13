@@ -93,6 +93,8 @@ class SurveyAdminForm(ModelForm):
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
     form = SurveyAdminForm
+    change_form_template = "admin\QuestionLibrary\Survey\change_form1.html"
+
 
     def save_model(self, request, obj, form, change):
         # obj.user = request.user
