@@ -6,6 +6,9 @@ from django.utils.decorators import method_decorator
 from social_django.utils import load_strategy
 import requests
 import urllib
+from QuestionLibrary.models import *
+from wsgiref.util import FileWrapper
+
 
 
 @method_decorator(login_required, name='dispatch')
@@ -69,3 +72,19 @@ class EsriProxy(View):
 
         except:
             return HttpResponse(status=500)
+
+
+class XLSView(View):
+    def genXlsSheet(self):
+        instance = Survey.objects.get()
+        self
+
+    model = Survey
+
+def download_xls(request):
+    filename = os.path.join(settings.BASE_DIR, f'QuestionLibrary\\generated_forms\\{Survey.objects.get(id=8)}.xlsx')
+    content = FileWrapper(filename)
+    response = HttpResponse(content, content_type='application/pdf')
+    response['Content-Length'] = os.path.getsize(filename)
+    response['Content-Disposition'] = 'attachment; filename=%s' % 'whatever_name_will_appear_in_download.pdf'
+    return response

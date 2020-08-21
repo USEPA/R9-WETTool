@@ -300,11 +300,10 @@
                 {% block after_related_objects %}{% endblock %}
 
                 {% block submit_buttons_bottom %}
-                    {{ block.super }}
-                    <div class="submit-row">
-                        <input type="submit" value="Submit Base Data to Survey123">
-                        <input type="submit" value="Generate XLS Sheet">
-                    </div>
+{#                    <div class="submit-row">#}
+{#                        <input type="submit" value="Submit Base Data to Survey123">#}
+{#                        <input type="submit" value="Generate XLS Sheet">#}
+{#                    </div>#}
                     {% submit_row %}{% endblock %}
 
                 {% block admin_change_form_document_ready %}
