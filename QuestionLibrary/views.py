@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.views.generic import View
-from django.http.response import HttpResponse
+from django.http.response import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from social_django.utils import load_strategy
@@ -8,7 +8,7 @@ import requests
 import urllib
 from QuestionLibrary.models import *
 from wsgiref.util import FileWrapper
-
+import mimetypes
 
 
 @method_decorator(login_required, name='dispatch')
@@ -76,15 +76,15 @@ class EsriProxy(View):
 
 class XLSView(View):
     def genXlsSheet(self):
-        instance = Survey.objects.get()
-        self
+        return
 
-    model = Survey
+
 
 def download_xls(request):
-    filename = os.path.join(settings.BASE_DIR, f'QuestionLibrary\\generated_forms\\{Survey.objects.get(id=8)}.xlsx')
-    content = FileWrapper(filename)
-    response = HttpResponse(content, content_type='application/pdf')
-    response['Content-Length'] = os.path.getsize(filename)
-    response['Content-Disposition'] = 'attachment; filename=%s' % 'whatever_name_will_appear_in_download.pdf'
-    return response
+        fl_path = 'C:\Data\R9\WETTool\QuestionLibrary\generated_forms'
+        filename = '8.xlsx'
+        fl = open(fl_path, 'r')
+        mime_type, _ = mimetypes.guess_type(fl_path)
+        response = HttpResponse(fl, content_type=mime_type)
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        return response

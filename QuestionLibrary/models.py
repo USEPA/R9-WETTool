@@ -286,109 +286,113 @@ class Survey(models.Model):
         service_config_layers = json.loads(self.service_config)
         # get layers that serve a origin in relationship
         origin_layers = [x for x in service_config_layers if
-                         any(y['role'] == 'esriRelRoleOrigin' for y in x['relationships'])]
-        for x in origin_layers:
-            # count = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
-            #                      params={"where": "1=1", "outFields": "*", "returnCountOnly": "true", 'token': token,
-            #                              'f': 'json'})
+                         any(y['role'] == 'esriRelRoleOrigin' for y in x['relationships'])] #service config for the selected layer x=origin_id?
 
-            result_offset = 0
-            related_responses = {}
-            while True:
-                # get features in origin layer
-                q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
-                                 params={"where": "1=1",
-                                         "resultOffset": result_offset,
-                                         "resultRecordCount": 10,
-                                         "outFields": "*",
-                                         'token': token,
-                                         'f': 'json'})
-                layer_name = x['name']
+        result_offset = 0
+        related_responses = {}
+    #     while True:
+    #         # get features in origin layer
+    #         q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
+    #                          params={"where": "1=1",  # "objectIds": ','.join(object_ids)
+    #                                  "resultOffset": result_offset,
+    #                                  "resultRecordCount": 10,
+    #                                  "outFields": "*",
+    #                                  'token': token,
+    #                                  'f': 'json'})
+    #         layer_name = x['name']
+    #
+    #         # object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
+    #         selected = self.selected_features.split(',')
+    #
+    #         object_ids = selected
+    #
+    #         if len(object_ids) == 0:
+    #             break
+    #         else:
+    #             result_offset += 10
+    #
+    #         for related_layer in [y for y in x['relationships']]:  # esriRelRoleDestination
+    #             related_responses[related_layer['name']] = requests.get(
+    #                 url=self.base_map_service + '/' + str(x['id']) + '/queryRelatedRecords',
+    #                 params={"objectIds": ','.join(object_ids),
+    #                         "relationshipId": related_layer['id'],
+    #                         "outFields": "*",
+    #                         'token': token,
+    #                         'f': 'json'})
+    #
+    #             # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
+    #         for origin_feature in q.json()['features']:
+    #             # loop through relationships to get all features in all related layers
+    #             for related_layer_name, related_response in related_responses.items():
+    #                 related_features = [z['relatedRecords'][0] for z in
+    #                                     related_response.json()['relatedRecordGroups']
+    #                                     if z['objectId'] == origin_feature['attributes']['OBJECTID']]
+    #                 for related_feature in related_features:
+    #                     # todo: figure out where to pull geometry from... like froms base_facility_inventory... not the origin table
+    #                     # this is fair dynamic but geometry needs to be captured correctly
+    #                     # this should work correctly based on our current understanding of how the data is structured and fall back to
+    #                     # the origin geometry if related records isn't the for some reason
+    #                     feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',
+    #                                                                                 related_feature.get('geometry',
+    #                                                                                                     None))}
+    #
+    #                     for k, v in related_feature['attributes'].items():
+    #                         feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
+    #
+    #                     for k, v in origin_feature['attributes'].items():
+    #                         feature['attributes'][self.formattedFieldName(layer_name, k)] = v
+    #
+    #                     features.append(feature)
+    #                     # print(feature)
+    #
+    # # print(features)
+    # return features
 
-                object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
-                if len(object_ids) == 0:
-                    break
-                else:
-                    result_offset += 10
 
-                for related_layer in [y for y in x['relationships'] if y['role'] == 'esriRelRoleOrigin']:
-                    related_responses[related_layer['name']] = requests.get(
-                        url=self.base_map_service + '/' + str(x['id']) + '/queryRelatedRecords',
-                        params={"objectIds": ','.join(object_ids),
-                                "relationshipId": related_layer['id'],
-                                "outFields": "*",
-                                'token': token,
-                                'f': 'json'})
+def postAttributes(self, user):
+    social = user.social_auth.get(provider='agol')
+    token = social.get_access_token(load_strategy())
+    feat = self.getBaseAttributes(user)
+    data = urlencode({"adds": json.dumps(feat)})
 
-                    # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
+    r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
+                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
-                for origin_feature in q.json()['features']:
-                    # loop through relationships to get all features in all related layers
-                    for related_layer_name, related_response in related_responses.items():
-                        related_features = [z['relatedRecords'][0] for z in
-                                            related_response.json()['relatedRecordGroups']
-                                            if z['objectId'] == origin_feature['attributes']['OBJECTID']]
-                        for related_feature in related_features:
-                            # todo: figure out where to pull geometry from... like froms base_facility_inventory... not the origin table
-                            # this is fair dynamic but geometry needs to be captured correctly
-                            # this should work correctly based on our current understanding of how the data is structured and fall back to
-                            # the origin geometry if related records isn't the for some reason
-                            feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',
-                                                                                        related_feature.get('geometry',
-                                                                                                            None))}
 
-                            for k, v in related_feature['attributes'].items():
-                                feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
+def get_formatted_fields(self):
+    feat_service = json.loads(self.service_config)
+    fields = []
+    omit_fields = {'FACID', 'FACdetailID' 'created_user', 'created_date',
+                   'AlternateTextID', 'SystemTextIDPublic', 'FederalSystemType',
+                   'last_edited_user', 'last_edited_user'}
+    # todo do these need to be hidden or do the need to be left out completely
 
-                            for k, v in origin_feature['attributes'].items():
-                                feature['attributes'][self.formattedFieldName(layer_name, k)] = v
+    for x in feat_service:
+        for y in x['fields']:
+            if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+                fields.append({
+                    'type': 'hidden',
+                    'name': self.formattedFieldName(x['name'], y['name']),
+                    'label': y['alias'],
+                })
+            elif y['name'] in omit_fields:
+                fields.append({
+                    'type': 'hidden',
+                    'name': self.formattedFieldName(x['name'], y['name']),
+                    'label': y['alias'],
+                })
+            else:
+                fields.append({
+                    'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                    'name': self.formattedFieldName(x['name'], y['name']),
+                    'label': y['alias']
+                })
 
-                            features.append(feature)
-                            # print(feature)
-        # print(features)
-        return features
+    return fields
 
-    def postAttributes(self, user):
-        social = user.social_auth.get(provider='agol')
-        token = social.get_access_token(load_strategy())
-        feat = self.getBaseAttributes(user)
-        data = urlencode({"adds": json.dumps(feat)})
-        r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
-                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
-    def get_formatted_fields(self):
-        feat_service = json.loads(self.service_config)
-        fields = []
-        omit_fields = {'FACID', 'FACdetailID' 'created_user', 'created_date',
-                       'AlternateTextID', 'SystemTextIDPublic', 'FederalSystemType',
-                       'last_edited_user', 'last_edited_user'}
-        # todo do these need to be hidden or do the need to be left out completely
-
-        for x in feat_service:
-            for y in x['fields']:
-                if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                    fields.append({
-                        'type': 'hidden',
-                        'name': self.formattedFieldName(x['name'], y['name']),
-                        'label': y['alias'],
-                    })
-                elif y['name'] in omit_fields:
-                    fields.append({
-                        'type': 'hidden',
-                        'name': self.formattedFieldName(x['name'], y['name']),
-                        'label': y['alias'],
-                    })
-                else:
-                    fields.append({
-                        'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                        'name': self.formattedFieldName(x['name'], y['name']),
-                        'label': y['alias']
-                    })
-
-        return fields
-
-    class Meta:
-        verbose_name = "Assessment"
+class Meta:
+    verbose_name = "Assessment"
 
 
 # todo: figure out how to publish survey123. it might have to be manual

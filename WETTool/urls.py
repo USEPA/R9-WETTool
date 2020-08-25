@@ -16,14 +16,14 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.urls import path, include
-from QuestionLibrary.views import EsriProxy, XLSView
+from QuestionLibrary.views import EsriProxy, XLSView, download_xls
 admin.site.site_header = 'WET Tool'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('oauth2/', include('social_django.urls', namespace='social_django')),
     path('proxy/', EsriProxy.as_view()),
-    path('xls/', XLSView.as_view())
+    path('xls/', XLSView.as_view()),
 ]
 
 if settings.DEBUG:

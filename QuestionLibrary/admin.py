@@ -1,7 +1,9 @@
 from django.contrib import admin
 from .models import *
 from django.forms import ModelForm, ModelChoiceField, CharField, HiddenInput
+from django import forms
 from django.core.exceptions import ValidationError
+import requests, json
 
 
 @admin.register(Media)
@@ -84,6 +86,17 @@ class SurveyQuestionInline(admin.TabularInline):
 class SurveyAdminForm(ModelForm):
     selected_features = CharField(widget=HiddenInput())
 
+    #define an init here
+    layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.service_config is not None:
+            config = json.loads(self.instance.service_config)
+
+            layer_choices = [(x['id'], x['name']) for x in config]
+            self.fields['layer'].choices = layer_choices
+
     class Meta:
         model = Survey
         exclude = []
@@ -93,7 +106,7 @@ class SurveyAdminForm(ModelForm):
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
     form = SurveyAdminForm
-
+    fields = ['name','base_map_service', 'layer', 'survey123_service', 'service_config', 'selected_features']
 
 
 
