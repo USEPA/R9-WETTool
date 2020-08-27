@@ -83,7 +83,7 @@ def download_xls_action(modeladmin, request, queryset):
         excel = open(path, "rb")
 
         response = HttpResponse(excel, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename=survey_config_service{obj.name}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename=survey_config_service_{obj.name}.xlsx'
         return response
 
 

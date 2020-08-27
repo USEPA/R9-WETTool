@@ -23,7 +23,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('oauth2/', include('social_django.urls', namespace='social_django')),
     path('proxy/', EsriProxy.as_view()),
-    path('xls/', download_xls_action),
 ]
 
 if settings.DEBUG:
