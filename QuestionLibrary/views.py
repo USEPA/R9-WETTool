@@ -8,7 +8,7 @@ import requests
 import urllib
 from QuestionLibrary.models import *
 from wsgiref.util import FileWrapper
-import mimetypes
+import csv
 
 
 @method_decorator(login_required, name='dispatch')
@@ -34,7 +34,7 @@ class EsriProxy(View):
 
             '''Right now just allow all authorized users to use proxy but we can furthur filter access
             down to those who have access to the data intake'''
-            # request.user.has_perm('aum.view_dataintake') # check if user has permission to view data intakes
+            # request.user.has_perm('aum.view_dataintake') # check if user has permission to download_xls_sheet data intakes
             '''we will need to build out further the row level access to data intake probably using django-guardian'''
             # data_dump = DataIntake.objects.get(pk=match.group(5)) # get obj to check permissions in teh future
 
@@ -64,7 +64,9 @@ class EsriProxy(View):
             token = self.get_token(request)
 
             # for posts the token goes in a header
-            r = requests.post(url, data=urllib.parse.unquote(request.body.decode('utf-8')), headers={"X-Esri-Authorization": f"Bearer {token}", "Content-Type": "application/x-www-form-urlencoded"})
+            r = requests.post(url, data=urllib.parse.unquote(request.body.decode('utf-8')),
+                              headers={"X-Esri-Authorization": f"Bearer {token}",
+                                       "Content-Type": "application/x-www-form-urlencoded"})
             if r.status_code != requests.codes.ok:
                 return HttpResponse(status=r.status_code)
 
@@ -74,17 +76,22 @@ class EsriProxy(View):
             return HttpResponse(status=500)
 
 
-class XLSView(View):
-    def genXlsSheet(self):
-        return
+def download_xls_action(modeladmin, request, queryset):
+    for obj in queryset:
+        Survey.generate_xlsform(obj)
+        path = os.path.join(settings.BASE_DIR, f'QuestionLibrary\\generated_forms\\{obj.id}.xlsx')
+        excel = open(path, "rb")
 
-
-
-def download_xls(request):
-        fl_path = 'C:\Data\R9\WETTool\QuestionLibrary\generated_forms'
-        filename = '8.xlsx'
-        fl = open(fl_path, 'r')
-        mime_type, _ = mimetypes.guess_type(fl_path)
-        response = HttpResponse(fl, content_type=mime_type)
-        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        response = HttpResponse(excel, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename=survey_config_service{obj.name}.xlsx'
         return response
+
+
+download_xls_action.short_description = 'Download Survey123 Service Configuration'
+
+
+def load_selected_records_action(modeladmin, request):
+    print('test')
+
+
+load_selected_records_action.short_description = 'Load Selected Records to Survey123'

@@ -11,6 +11,7 @@ import requests, json
 from urllib.parse import urlencode
 from itertools import islice
 from django.core.exceptions import ValidationError
+import csv
 
 
 class LookupAbstract(models.Model):
@@ -349,50 +350,50 @@ class Survey(models.Model):
     # return features
 
 
-def postAttributes(self, user):
-    social = user.social_auth.get(provider='agol')
-    token = social.get_access_token(load_strategy())
-    feat = self.getBaseAttributes(user)
-    data = urlencode({"adds": json.dumps(feat)})
+    def postAttributes(self, user):
+        social = user.social_auth.get(provider='agol')
+        token = social.get_access_token(load_strategy())
+        feat = self.getBaseAttributes(user)
+        data = urlencode({"adds": json.dumps(feat)})
 
-    r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
-                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-
-
-def get_formatted_fields(self):
-    feat_service = json.loads(self.service_config)
-    fields = []
-    omit_fields = {'FACID', 'FACdetailID' 'created_user', 'created_date',
-                   'AlternateTextID', 'SystemTextIDPublic', 'FederalSystemType',
-                   'last_edited_user', 'last_edited_user'}
-    # todo do these need to be hidden or do the need to be left out completely
-
-    for x in feat_service:
-        for y in x['fields']:
-            if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                fields.append({
-                    'type': 'hidden',
-                    'name': self.formattedFieldName(x['name'], y['name']),
-                    'label': y['alias'],
-                })
-            elif y['name'] in omit_fields:
-                fields.append({
-                    'type': 'hidden',
-                    'name': self.formattedFieldName(x['name'], y['name']),
-                    'label': y['alias'],
-                })
-            else:
-                fields.append({
-                    'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                    'name': self.formattedFieldName(x['name'], y['name']),
-                    'label': y['alias']
-                })
-
-    return fields
+        r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
+                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
 
-class Meta:
-    verbose_name = "Assessment"
+    def get_formatted_fields(self):
+        feat_service = json.loads(self.service_config)
+        fields = []
+        omit_fields = {'FACID', 'FACdetailID' 'created_user', 'created_date',
+                       'AlternateTextID', 'SystemTextIDPublic', 'FederalSystemType',
+                       'last_edited_user', 'last_edited_user'}
+        # todo do these need to be hidden or do the need to be left out completely
+
+        for x in feat_service:
+            for y in x['fields']:
+                if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+                    fields.append({
+                        'type': 'hidden',
+                        'name': self.formattedFieldName(x['name'], y['name']),
+                        'label': y['alias'],
+                    })
+                elif y['name'] in omit_fields:
+                    fields.append({
+                        'type': 'hidden',
+                        'name': self.formattedFieldName(x['name'], y['name']),
+                        'label': y['alias'],
+                    })
+                else:
+                    fields.append({
+                        'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                        'name': self.formattedFieldName(x['name'], y['name']),
+                        'label': y['alias']
+                    })
+
+        return fields
+
+
+    class Meta:
+        verbose_name = "Assessment"
 
 
 # todo: figure out how to publish survey123. it might have to be manual

@@ -4,7 +4,9 @@ from django.forms import ModelForm, ModelChoiceField, CharField, HiddenInput
 from django import forms
 from django.core.exceptions import ValidationError
 import requests, json
+from django.http.response import HttpResponse
 
+from .views import download_xls_action, load_selected_records_action
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
@@ -56,9 +58,10 @@ class QuestionFieldVal(ModelForm):
         super(QuestionFieldVal, self).__init__(*args, **kwargs)
         self.fields['default_unit'].queryset = Lookup.objects.filter(group=self.instance.lookup)
 
-
     def clean_lookup(self):
-        if LookupGroup.objects.filter(label=self.cleaned_data.get('response_type', None)).exists() and not self.cleaned_data.get('lookup', None):
+        if LookupGroup.objects.filter(
+                label=self.cleaned_data.get('response_type', None)).exists() and not self.cleaned_data.get('lookup',
+                                                                                                           None):
             raise ValidationError('Select proper Lookup')
         return self.cleaned_data.get('lookup', None)
 
@@ -78,15 +81,10 @@ class MasterQuestionAdmin(admin.ModelAdmin):
     #     return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-class SurveyQuestionInline(admin.TabularInline):
-    model = QuestionSet.surveys.through
-    # ordering = ['sort_order']
-
-
 class SurveyAdminForm(ModelForm):
     selected_features = CharField(widget=HiddenInput())
 
-    #define an init here
+    # define an init here
     layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
 
     def __init__(self, *args, **kwargs):
@@ -102,14 +100,20 @@ class SurveyAdminForm(ModelForm):
         exclude = []
 
 
+class SurveyQuestionInline(admin.TabularInline):
+    model = QuestionSet.surveys.through
+    # ordering = ['sort_order']
+
+
+
+
+
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
     form = SurveyAdminForm
-    fields = ['name','base_map_service', 'layer', 'survey123_service', 'service_config', 'selected_features']
-
-
-
+    fields = ['name', 'base_map_service', 'layer', 'survey123_service', 'service_config', 'selected_features']
+    actions = [download_xls_action, load_selected_records_action]
 
     def save_model(self, request, obj, form, change):
         # obj.user = request.user
@@ -118,7 +122,7 @@ class SurveyAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-#todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
+# todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
 
 
 class QuestionSetInline(admin.TabularInline):
@@ -131,7 +135,6 @@ class QuestionSetAdmin(admin.ModelAdmin):
     list_display = ['name', 'owner']
     fields = ['name', 'owner']
     inlines = [QuestionSetInline]
-
 
 # class JobsInlines(admin.TabularInline):
 #     model = Survey
