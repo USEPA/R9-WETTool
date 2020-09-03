@@ -92,8 +92,8 @@ class SurveyAdminForm(ModelForm):
         if self.instance.service_config is not None:
             config = json.loads(self.instance.service_config)
 
-            layer_choices = [(x['id'], x['name']) for x in config]
-            self.fields['layer'].choices = layer_choices
+            layer_choice = [(x['id'], x['name']) for x in config]
+            self.fields['layer'].choices = layer_choice
 
     class Meta:
         model = Survey
@@ -112,6 +112,8 @@ class SurveyQuestionInline(admin.TabularInline):
 class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
     form = SurveyAdminForm
+    list_display = ['name', 'base_service_ready', 'survey_service_ready']
+
     fields = ['name', 'base_map_service', 'layer', 'survey123_service', 'service_config', 'selected_features']
     actions = [download_xls_action, load_selected_records_action]
 

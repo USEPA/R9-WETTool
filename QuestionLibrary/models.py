@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from itertools import islice
 from django.core.exceptions import ValidationError
 import csv
+from django.utils.html import format_html
 
 
 class LookupAbstract(models.Model):
@@ -188,6 +189,9 @@ class Survey(models.Model):
     # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
 
     selected_features = models.TextField(null=True, blank=True)
+    layer = models.TextField(null=True, blank=True)
+
+    # color_code = models.CharField(max_length=6)
 
     def __str__(self):
         return self.name
@@ -198,6 +202,22 @@ class Survey(models.Model):
         'label': 'question',
 
     }
+
+    def survey_service_ready(self):
+        if self.survey123_service is not None:
+            return True
+        return False
+
+    survey_service_ready.boolean = True
+    survey_service_ready.short_description = "Valid Survey123 Service"
+
+    def base_service_ready(self):
+        if self.base_map_service is not None:
+            return True
+        return False
+
+    base_service_ready.boolean = True
+    base_service_ready.short_description = "Download Service Config"
 
     def generate_xlsform(self):
         template = os.path.join(settings.BASE_DIR, settings.XLS_FORM_TEMPLATE)
@@ -286,69 +306,75 @@ class Survey(models.Model):
 
         service_config_layers = json.loads(self.service_config)
         # get layers that serve a origin in relationship
-        origin_layers = [x for x in service_config_layers if
-                         any(y['role'] == 'esriRelRoleOrigin' for y in x['relationships'])] #service config for the selected layer x=origin_id?
+        # origin_layers = [x for x in service_config_layers if
+        #                  x['id'] = self.layer]
+        # any(y['role'] == 'esriRelRoleOrigin' for y in x['relationships'])] #service config for the selected layer x=origin_id?
+        for x in service_config_layers:
+            if x['id'] == int(self.layer):
+                origin_layer = x
 
-        result_offset = 0
-        related_responses = {}
-    #     while True:
-    #         # get features in origin layer
-    #         q = requests.get(url=self.base_map_service + '/' + str(x['id']) + '/query',
-    #                          params={"where": "1=1",  # "objectIds": ','.join(object_ids)
-    #                                  "resultOffset": result_offset,
-    #                                  "resultRecordCount": 10,
-    #                                  "outFields": "*",
-    #                                  'token': token,
-    #                                  'f': 'json'})
-    #         layer_name = x['name']
-    #
-    #         # object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
-    #         selected = self.selected_features.split(',')
-    #
-    #         object_ids = selected
-    #
-    #         if len(object_ids) == 0:
-    #             break
-    #         else:
-    #             result_offset += 10
-    #
-    #         for related_layer in [y for y in x['relationships']]:  # esriRelRoleDestination
-    #             related_responses[related_layer['name']] = requests.get(
-    #                 url=self.base_map_service + '/' + str(x['id']) + '/queryRelatedRecords',
-    #                 params={"objectIds": ','.join(object_ids),
-    #                         "relationshipId": related_layer['id'],
-    #                         "outFields": "*",
-    #                         'token': token,
-    #                         'f': 'json'})
-    #
-    #             # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
-    #         for origin_feature in q.json()['features']:
-    #             # loop through relationships to get all features in all related layers
-    #             for related_layer_name, related_response in related_responses.items():
-    #                 related_features = [z['relatedRecords'][0] for z in
-    #                                     related_response.json()['relatedRecordGroups']
-    #                                     if z['objectId'] == origin_feature['attributes']['OBJECTID']]
-    #                 for related_feature in related_features:
-    #                     # todo: figure out where to pull geometry from... like froms base_facility_inventory... not the origin table
-    #                     # this is fair dynamic but geometry needs to be captured correctly
-    #                     # this should work correctly based on our current understanding of how the data is structured and fall back to
-    #                     # the origin geometry if related records isn't the for some reason
-    #                     feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',
-    #                                                                                 related_feature.get('geometry',
-    #                                                                                                     None))}
-    #
-    #                     for k, v in related_feature['attributes'].items():
-    #                         feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
-    #
-    #                     for k, v in origin_feature['attributes'].items():
-    #                         feature['attributes'][self.formattedFieldName(layer_name, k)] = v
-    #
-    #                     features.append(feature)
-    #                     # print(feature)
-    #
-    # # print(features)
-    # return features
+                result_offset = 0
+                related_responses = {}
+                selected = self.selected_features.split(',')
 
+                object_ids = selected
+
+                if len(object_ids) == 0:
+                    break
+                else:
+                    result_offset += 10
+                    # get features in origin layer
+
+                q = requests.get(url=self.base_map_service + '/' + str(self.layer) + '/query',
+                                 params={"where": "1=1",
+                                         "objectIds": ','.join(object_ids),
+                                         # "resultOffset": result_offset,
+                                         # "resultRecordCount": 10,
+                                         "outFields": "*",
+                                         'token': token,
+                                         'f': 'json'})
+                layer_name = origin_layer['name']
+
+                # object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
+
+                # get the related layer
+                for related_layer in [y for y in origin_layer['relationships']]:  # esriRelRoleDestination
+                    related_responses[related_layer['name']] = requests.get(
+                        url=self.base_map_service + '/' + str(self.layer) + '/queryRelatedRecords',
+                        params={"objectIds": ','.join(object_ids),
+                                "relationshipId": related_layer['id'],
+                                "outFields": "*",
+                                'token': token,
+                                'f': 'json'})
+
+                    # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
+                for origin_feature in q.json()['features']:
+                    # loop through relationships to get all features in all related layers
+                    for related_layer_name, related_response in related_responses.items():
+                        related_features = [z['relatedRecords'][0] for z in
+                                            related_response.json()['relatedRecordGroups']
+                                            if z['objectId'] == origin_feature['attributes']['OBJECTID']]
+                        for related_feature in related_features:
+                            # todo: figure out where to pull geometry from... like froms base_facility_inventory... not the origin table
+                            # this is fair dynamic but geometry needs to be captured correctly
+                            # this should work correctly based on our current understanding of how the data is structured and fall back to
+                            # the origin geometry if related records isn't the for some reason
+                            feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',
+                                                                                        related_feature.get(
+                                                                                            'geometry',
+                                                                                            None))}
+
+                            for k, v in related_feature['attributes'].items():
+                                feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
+
+                            for k, v in origin_feature['attributes'].items():
+                                feature['attributes'][self.formattedFieldName(layer_name, k)] = v
+
+                            features.append(feature)
+                            print(feature)
+
+        # print(features)
+        return features
 
     def postAttributes(self, user):
         social = user.social_auth.get(provider='agol')
@@ -358,7 +384,6 @@ class Survey(models.Model):
 
         r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-
 
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
@@ -390,7 +415,6 @@ class Survey(models.Model):
                     })
 
         return fields
-
 
     class Meta:
         verbose_name = "Assessment"

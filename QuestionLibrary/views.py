@@ -90,8 +90,10 @@ def download_xls_action(modeladmin, request, queryset):
 download_xls_action.short_description = 'Download Survey123 Service Configuration'
 
 
-def load_selected_records_action(modeladmin, request):
-    print('test')
+def load_selected_records_action(modeladmin, request, queryset):
+    for obj in queryset:
+        Survey.getBaseAttributes(obj, request.user)
+
 
 
 load_selected_records_action.short_description = 'Load Selected Records to Survey123'
