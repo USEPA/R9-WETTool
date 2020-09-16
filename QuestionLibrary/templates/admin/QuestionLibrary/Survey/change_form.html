@@ -277,14 +277,14 @@
                                 {% include "admin/includes/fieldset.html" %}
                             {% endif %}
                         {% endfor %}
-                        <div style="height: 500px; min-width: 50%">
+                        <div style="height: 500px; min-width: 50%; padding-bottom: 15px;">
                             <div id="mapDiv" style="height: 500px; min-width: 100%;"></div>
                         </div>
                     </div>
                 {% endblock %}
 
                 {% block after_field_sets %}
-                    <fieldset class="module" style="height: 500px;">
+                    <fieldset class="module" style="height: 500px; padding-bottom: 15px;">
                         <h2>AVAILABLE FEATURES</h2>
                         <div id="featuresTable" style="height: 500px; overflow-x: auto;" class="ag-theme-balham"></div>
                     </fieldset>

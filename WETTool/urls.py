@@ -20,7 +20,7 @@ from QuestionLibrary.views import EsriProxy, download_xls_action
 admin.site.site_header = 'WET Tool'
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('', admin.site.urls),
     path('oauth2/', include('social_django.urls', namespace='social_django')),
     path('proxy/', EsriProxy.as_view()),
 ]

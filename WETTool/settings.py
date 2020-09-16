@@ -152,7 +152,7 @@ SOCIAL_AUTH_PIPELINE = [  # Note: Sequence of functions matters here.
 
 AUTHENTICATION_BACKENDS= local_settings.AUTHENTICATION_BACKENDS
 
-LOGIN_REDIRECT_URL = '/admin/'
+LOGIN_REDIRECT_URL = '/'
 
 INTERNAL_IPS = [
     '127.0.0.1',
