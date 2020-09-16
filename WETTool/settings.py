@@ -115,13 +115,6 @@ USE_L10N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.0/howto/static-files/
-
-STATIC_URL = '/static/'
-
-STATIC_ROOT = 'static'
-
 XLS_FORM_TEMPLATE = 'survey123_template.xlsx'
 
 SOCIAL_AUTH_AGOL_KEY = getattr(local_settings, 'SOCIAL_AUTH_AGOL_KEY', '')
@@ -149,3 +142,10 @@ INTERNAL_IPS = getattr(local_settings, 'INTERNAL_IPS', [])
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
 URL_PREFIX = getattr(local_settings, 'URL_PREFIX', '')
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/3.0/howto/static-files/
+
+STATIC_URL = f'{URL_PREFIX if URL_PREFIX else "/"}static/'
+
+STATIC_ROOT = 'static'
