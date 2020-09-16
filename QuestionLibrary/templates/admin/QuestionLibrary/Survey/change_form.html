@@ -14,6 +14,15 @@
     <script type="text/javascript" src="https://js.arcgis.com/4.16/"></script>
     <link rel="stylesheet" href="https://js.arcgis.com/4.16/esri/css/main.css">
     <script>
+
+        {% if request.is_secure %}
+            let SITE_PROTOCOL = 'https://'
+        {% else %}
+            let SITE_PROTOCOL = 'http://'
+        {% endif %}
+
+        let host = SITE_PROTOCOL + "{{ request.META.HTTP_HOST }}";
+
         (function ($) {
             document.addEventListener('DOMContentLoaded', () => {
                 var csrf = document.getElementsByName('csrfmiddlewaretoken')[0].value;
@@ -24,10 +33,10 @@
                         'esri/core/urlUtils', 'esri/config', "esri/widgets/Fullscreen", "esri/widgets/FeatureTable"],
                     function (Map, MapView, Sketch, FeatureLayer, GraphicsLayer, Graphic, projection, Point, VectorTileLayer,
                               urlUtils, esriConfig, Fullscreen, FeatureTable) {
-                        esriConfig.request.trustedServers.push('http://127.0.0.1:8000');
+                        esriConfig.request.trustedServers.push(host);
                         urlUtils.addProxyRule({
                             urlPrefix: 'services.arcgis.com/cJ9YHowT8TU7DUyn',
-                            proxyUrl: 'http://127.0.0.1:8000/proxy/'
+                            proxyUrl: host+ '/proxy/'
                         });
                         esriConfig.request.interceptors.push({
                             urls: ['https://services.arcgis.com/cJ9YHowT8TU7DUyn'],
