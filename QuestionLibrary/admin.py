@@ -82,7 +82,7 @@ class MasterQuestionAdmin(admin.ModelAdmin):
 
 
 class SurveyAdminForm(ModelForm):
-    selected_features = CharField(widget=HiddenInput())
+    selected_features = CharField(widget=HiddenInput(), required=False)
 
     # define an init here
     layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
