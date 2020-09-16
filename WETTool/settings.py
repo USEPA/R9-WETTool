@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     'agol_oauth2',
     'social_django',
     'debug_toolbar',
-    'inline_actions'
 ]
 
 MIDDLEWARE = [
