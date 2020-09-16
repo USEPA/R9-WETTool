@@ -146,6 +146,6 @@ URL_PREFIX = getattr(local_settings, 'URL_PREFIX', '')
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATIC_URL = f'{URL_PREFIX if URL_PREFIX else "/"}static/'
+STATIC_URL = f'/{URL_PREFIX}static/'
 
 STATIC_ROOT = 'static'
