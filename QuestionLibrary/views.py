@@ -9,7 +9,7 @@ import urllib
 from QuestionLibrary.models import *
 from wsgiref.util import FileWrapper
 import csv
-
+from django.contrib import messages
 
 @method_decorator(login_required, name='dispatch')
 class EsriProxy(View):
@@ -84,6 +84,7 @@ def download_xls_action(modeladmin, request, queryset):
 
         response = HttpResponse(excel, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = f'attachment; filename=survey_config_service_{obj.name}.xlsx'
+        messages.success(request, 'Successful')
         return response
 
 
@@ -93,6 +94,7 @@ download_xls_action.short_description = 'Download Survey123 Service Configuratio
 def load_selected_records_action(modeladmin, request, queryset):
     for obj in queryset:
         Survey.getBaseAttributes(obj, request.user)
+        messages.success(request, 'Records Successfully Loaded to Survery123')
 
 
 
