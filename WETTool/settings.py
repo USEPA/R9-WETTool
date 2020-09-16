@@ -145,3 +145,5 @@ LOGIN_REDIRECT_URL = '/'
 INTERNAL_IPS = getattr(local_settings, 'INTERNAL_IPS', [])
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
+URL_PREFIX = getattr(local_settings, 'URL_PREFIX', '')
