@@ -120,6 +120,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+STATIC_ROOT = 'static'
+
 XLS_FORM_TEMPLATE = 'survey123_template.xlsx'
 
 SOCIAL_AUTH_AGOL_KEY = getattr(local_settings, 'SOCIAL_AUTH_AGOL_KEY', '')
