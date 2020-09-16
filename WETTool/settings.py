@@ -21,12 +21,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '3oj@tks--0xg+&_+3#+ed1+)r2vrtckvbd*^9fp28ay_#i1i=f'
+SECRET_KEY = getattr(local_settings, 'SECRET_KEY', 'super_secret')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = getattr(local_settings, 'DEBUG', False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = getattr(local_settings, 'ALLOWED_HOSTS', [])
 
 
 # Application definition
@@ -79,19 +79,7 @@ WSGI_APPLICATION = 'WETTool.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'sql_server.pyodbc',
-        'NAME': 'WETTool',
-        'HOST': r'.\sql2017',
-        'PORT': '1433',
-        'USER': '',
-        'PASSWORD': '',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 13 for SQL Server'
-        }
-    }
-}
+DATABASES = getattr(local_settings, 'DATABASES', {})
 
 
 # Password validation
@@ -127,15 +115,10 @@ USE_L10N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.0/howto/static-files/
-
-STATIC_URL = '/static/'
-
 XLS_FORM_TEMPLATE = 'survey123_template.xlsx'
 
-SOCIAL_AUTH_AGOL_KEY = local_settings.SOCIAL_AUTH_AGOL_KEY
-SOCIAL_AUTH_AGOL_SECRET = local_settings.SOCIAL_AUTH_AGOL_SECRET
+SOCIAL_AUTH_AGOL_KEY = getattr(local_settings, 'SOCIAL_AUTH_AGOL_KEY', '')
+SOCIAL_AUTH_AGOL_SECRET = getattr(local_settings, 'SOCIAL_AUTH_AGOL_SECRET', '')
 SOCIAL_AUTH_AGOL_DOMAIN = 'epa.maps.arcgis.com'
 
 SOCIAL_AUTH_PIPELINE = [  # Note: Sequence of functions matters here.
@@ -150,11 +133,21 @@ SOCIAL_AUTH_PIPELINE = [  # Note: Sequence of functions matters here.
     'social_core.pipeline.user.user_details',
 ]
 
-AUTHENTICATION_BACKENDS= local_settings.AUTHENTICATION_BACKENDS
+AUTHENTICATION_BACKENDS = getattr(local_settings, 'AUTHENTICATION_BACKENDS', [])
 
-LOGIN_REDIRECT_URL = '/admin/'
 
-INTERNAL_IPS = [
-    '127.0.0.1',
-]
+
+INTERNAL_IPS = getattr(local_settings, 'INTERNAL_IPS', [])
+
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
+URL_PREFIX = getattr(local_settings, 'URL_PREFIX', '')
+
+LOGIN_REDIRECT_URL = f'/{URL_PREFIX}'
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/3.0/howto/static-files/
+
+
+STATIC_URL = f'/{URL_PREFIX}static/'
+
+STATIC_ROOT = 'static'
