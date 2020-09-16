@@ -135,7 +135,7 @@ SOCIAL_AUTH_PIPELINE = [  # Note: Sequence of functions matters here.
 
 AUTHENTICATION_BACKENDS = getattr(local_settings, 'AUTHENTICATION_BACKENDS', [])
 
-LOGIN_REDIRECT_URL = '/'
+
 
 INTERNAL_IPS = getattr(local_settings, 'INTERNAL_IPS', [])
 
@@ -143,8 +143,10 @@ MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 
 URL_PREFIX = getattr(local_settings, 'URL_PREFIX', '')
 
+LOGIN_REDIRECT_URL = f'/{URL_PREFIX}'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
+
 
 STATIC_URL = f'/{URL_PREFIX}static/'
 
