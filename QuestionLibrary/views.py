@@ -94,7 +94,7 @@ download_xls_action.short_description = 'Download Survey123 Service Configuratio
 
 def load_selected_records_action(modeladmin, request, queryset):
     for obj in queryset:
-        Survey.getBaseAttributes(obj, request.user)
+        obj.postAttributes(request.user)
         messages.success(request, 'Records Successfully Loaded to Survery123')
 
 
