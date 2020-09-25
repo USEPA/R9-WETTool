@@ -17,10 +17,10 @@ class MediaAdmin(admin.ModelAdmin):
 class FacilityTypeAdmin(admin.ModelAdmin):
     pass
 
-
-@admin.register(FacilitySubType)
-class FacilitySubTypeAdmin(admin.ModelAdmin):
-    pass
+#
+# @admin.register(FacilitySubType)
+# class FacilitySubTypeAdmin(admin.ModelAdmin):
+#     pass
 
 
 @admin.register(Category)
@@ -32,10 +32,10 @@ class CategoryAdmin(admin.ModelAdmin):
 class ResponseTypeAdmin(admin.ModelAdmin):
     pass
 
-
-@admin.register(Unit)
-class UnitAdmin(admin.ModelAdmin):
-    pass
+#
+# @admin.register(Unit)
+# class UnitAdmin(admin.ModelAdmin):
+#     pass
 
 
 @admin.register(FeatureServiceResponse)

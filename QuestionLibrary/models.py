@@ -43,21 +43,23 @@ class Media(LookupAbstract):
     pass
 
 
-# todo: if this is to be more generic then Water should not be used here... SubType perhaps is better?
-class FacilitySubType(LookupAbstract):
-    pass
+# # todo: if this is to be more generic then Water should not be used here... SubType perhaps is better?
+# class FacilitySubType(LookupAbstract):
+#     pass
 
 
 class FacilityType(LookupAbstract):
-    pass
+    category = models.ForeignKey('Category', on_delete=models.PROTECT, blank=True, null=True)
+    facility_type = models.TextField(max_length=250, blank=True, null=True)
+
 
 
 # todo: more like default config of logic.. rename?
 # todo: allow matching of these to fields in the actual data set
 class Category(LookupAbstract):
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
-    sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
+    # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
+    # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
 
 
 # todo: more closely link this with survey123.  Maybe allow input of the cross walk so its configurable and dynamic
@@ -79,13 +81,13 @@ class FeatureServiceResponse(models.Model):
     def __str__(self):
         return self.fs_response_type
 
-
 class MasterQuestion(models.Model):
     question = models.TextField(max_length=1000)
 
     # todo: why is media here and in category
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
     category = models.ForeignKey('Category', on_delete=models.PROTECT)
+    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
     response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT)
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True)
     # todo: triggers creation of second field for survey generation if not none
