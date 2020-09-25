@@ -48,9 +48,14 @@ class Media(LookupAbstract):
 #     pass
 
 
-class FacilityType(LookupAbstract):
+class FacilityType(models.Model):
+    facility_type = models.CharField(max_length=50, help_text='Facility Type',  blank=True, null=True)
+    fac_code = models.CharField(max_length=5, help_text='Facility Code', blank=True, null=True, verbose_name='Fac Code')
     category = models.ForeignKey('Category', on_delete=models.PROTECT, blank=True, null=True)
-    facility_type = models.TextField(max_length=250, blank=True, null=True)
+
+    def __str__(self):
+        return self.facility_type
+
 
 
 
@@ -87,7 +92,7 @@ class MasterQuestion(models.Model):
     # todo: why is media here and in category
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
     category = models.ForeignKey('Category', on_delete=models.PROTECT)
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
+    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
     response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT)
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True)
     # todo: triggers creation of second field for survey generation if not none
