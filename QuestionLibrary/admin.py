@@ -8,6 +8,7 @@ from django.http.response import HttpResponse
 
 from .views import download_xls_action, load_selected_records_action
 
+
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
     pass
@@ -16,6 +17,7 @@ class MediaAdmin(admin.ModelAdmin):
 @admin.register(FacilityType)
 class FacilityTypeAdmin(admin.ModelAdmin):
     pass
+
 
 #
 # @admin.register(FacilitySubType)
@@ -31,6 +33,7 @@ class CategoryAdmin(admin.ModelAdmin):
 @admin.register(ResponseType)
 class ResponseTypeAdmin(admin.ModelAdmin):
     pass
+
 
 #
 # @admin.register(Unit)
@@ -57,6 +60,17 @@ class QuestionFieldVal(ModelForm):
     def __init__(self, *args, **kwargs):
         super(QuestionFieldVal, self).__init__(*args, **kwargs)
         self.fields['default_unit'].queryset = Lookup.objects.filter(group=self.instance.lookup)
+        self.fields['facility_type'].queryset = FacilityType.objects.none()
+
+        if self.instance.category_id is not None:
+            try:
+                # category_id = int(self.data.get('category'))
+                self.fields['facility_type'].queryset = FacilityType.objects.filter(category=self.instance.category_id)
+            except (ValueError, TypeError):
+                pass
+
+        if self.instance.media_id is not None:
+            self.fields['category'].queryset = Category.objects.filter(media=self.instance.media_id)
 
     def clean_lookup(self):
         if LookupGroup.objects.filter(
@@ -64,6 +78,7 @@ class QuestionFieldVal(ModelForm):
                                                                                                            None):
             raise ValidationError('Select proper Lookup')
         return self.cleaned_data.get('lookup', None)
+
 
     class Meta:
         model = MasterQuestion
@@ -74,11 +89,12 @@ class QuestionFieldVal(ModelForm):
 class MasterQuestionAdmin(admin.ModelAdmin):
     form = QuestionFieldVal
     list_filter = ['category__media']
-    #
+    # #
     # def formfield_for_foreignkey(self, db_field, request, **kwargs):
-    #     if db_field.name == "default_unit":
-    #         kwargs["queryset"] = Lookup.objects.all()
+    #     if db_field.name == "facility_type":
+    #         kwargs["queryset"] = FacilityType.objects.filter(category=self.)
     #     return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
 
 
 class SurveyAdminForm(ModelForm):
@@ -103,9 +119,6 @@ class SurveyAdminForm(ModelForm):
 class SurveyQuestionInline(admin.TabularInline):
     model = QuestionSet.surveys.through
     # ordering = ['sort_order']
-
-
-
 
 
 @admin.register(Survey)

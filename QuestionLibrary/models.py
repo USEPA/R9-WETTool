@@ -125,7 +125,7 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_category_field_relevant(self):
-        return f"${{base_facility_inventory_Fac_Type}}='{self.category.facility_type.label}'"
+        return f"${{base_facility_inventory_Fac_Type}}='{self.facility_type}'"
 
     @property
     def formatted_survey_media_field_relevant(self):
