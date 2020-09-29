@@ -89,6 +89,7 @@ class QuestionFieldVal(ModelForm):
 class MasterQuestionAdmin(admin.ModelAdmin):
     form = QuestionFieldVal
     list_filter = ['category__media']
+    search_fields = ['question']
     # #
     # def formfield_for_foreignkey(self, db_field, request, **kwargs):
     #     if db_field.name == "facility_type":
