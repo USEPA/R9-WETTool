@@ -76,12 +76,22 @@ class QuestionFieldVal(ModelForm):
             if categories_queryset.count() > 0:
                 self.fields['category'].required = True
 
+        # response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'response_type', None)
+        # # lookup = self.cleaned_data['lookup'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'lookup', None)
+        # if response_type is not None:
+        #     self.fields['lookup'].required = False
+        #     if response_type.label == 'select_one':
+        #         self.fields['lookup'].required = True
+
+
     def clean_lookup(self):
-        if LookupGroup.objects.filter(
-                label=self.cleaned_data.get('response_type', None)).exists() and not self.cleaned_data.get('lookup',
-                                                                                                           None):
-            raise ValidationError('Select proper Lookup')
+        response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'response_type', None)
+
+        if response_type.label == 'select_one':
+            if self.cleaned_data['lookup'] is None:
+                raise ValidationError('Lookup required if Response Type is select_one.')
         return self.cleaned_data.get('lookup', None)
+
 
     def clean_category(self):
         categories = Category.objects.filter(media=self.cleaned_data['media'])
@@ -99,9 +109,10 @@ class QuestionFieldVal(ModelForm):
 
         return self.cleaned_data.get('category', None)
 
-    class Meta:
-        model = MasterQuestion
-        exclude = []
+
+class Meta:
+    model = MasterQuestion
+    exclude = []
 
 
 @admin.register(MasterQuestion)
@@ -115,7 +126,6 @@ class MasterQuestionAdmin(admin.ModelAdmin):
     #     if db_field.name == "facility_type":
     #         kwargs["queryset"] = FacilityType.objects.filter(category=self.)
     #     return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
 
 
 class SurveyAdminForm(ModelForm):
