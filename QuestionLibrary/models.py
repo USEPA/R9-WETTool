@@ -91,7 +91,7 @@ class MasterQuestion(models.Model):
 
     # todo: why is media here and in category
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
-    category = models.ForeignKey('Category', on_delete=models.PROTECT)
+    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
     facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
     response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT)
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True)

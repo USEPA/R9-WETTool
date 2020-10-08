@@ -69,8 +69,12 @@ class QuestionFieldVal(ModelForm):
             except (ValueError, TypeError):
                 pass
 
-        if self.instance.media_id is not None:
-            self.fields['category'].queryset = Category.objects.filter(media=self.instance.media_id)
+        media = self.cleaned_data['media'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'media', None)
+        if media is not None:
+            categories_queryset = Category.objects.filter(media=media)
+            self.fields['category'].queryset = categories_queryset
+            if categories_queryset.count() > 0:
+                self.fields['category'].required = True
 
     def clean_lookup(self):
         if LookupGroup.objects.filter(
@@ -79,6 +83,21 @@ class QuestionFieldVal(ModelForm):
             raise ValidationError('Select proper Lookup')
         return self.cleaned_data.get('lookup', None)
 
+    def clean_category(self):
+        categories = Category.objects.filter(media=self.cleaned_data['media'])
+        if len(categories) == 0:
+            self.cleaned_data['category'] = None
+        # else:
+        #     raise ValidationError('Category required if not selecting all media types.')
+        # elif self.cleaned_data['category'] not in categories:
+        #     raise ValidationError('Category required if not selecting all media types.')
+        # if len(categories) > 0 and self.cleaned_data['category'] in categories:
+        #     self.fields['category'].queryset = categories
+        #     raise ValidationError('Category required if not selecting all media types.')
+        # elif len(categories) == 0:
+        #     self.cleaned_data['category'] = None
+
+        return self.cleaned_data.get('category', None)
 
     class Meta:
         model = MasterQuestion
@@ -90,6 +109,7 @@ class MasterQuestionAdmin(admin.ModelAdmin):
     form = QuestionFieldVal
     list_filter = ['category__media']
     search_fields = ['question']
+
     # #
     # def formfield_for_foreignkey(self, db_field, request, **kwargs):
     #     if db_field.name == "facility_type":
