@@ -56,6 +56,7 @@ class LookupGroupAdmin(admin.ModelAdmin):
     inlines = [LookupInline]
 
 
+
 class QuestionFieldVal(ModelForm):
     def __init__(self, *args, **kwargs):
         super(QuestionFieldVal, self).__init__(*args, **kwargs)
