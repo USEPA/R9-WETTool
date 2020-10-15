@@ -73,6 +73,7 @@ class QuestionFieldVal(ModelForm):
         if media is not None:
             categories_queryset = Category.objects.filter(media=media)
             self.fields['category'].queryset = categories_queryset
+
             if categories_queryset.count() > 0:
                 self.fields['category'].required = True
 
@@ -94,9 +95,15 @@ class QuestionFieldVal(ModelForm):
 
 
     def clean_category(self):
-        categories = Category.objects.filter(media=self.cleaned_data['media'])
-        if len(categories) == 0:
-            self.cleaned_data['category'] = None
+        # categories = Category.objects.filter(media=self.cleaned_data['media'])
+        # if len(categories) == 0:
+        #     self.cleaned_data['category'] = None
+        category = self.cleaned_data['category'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'category', None)
+
+        if category != 'All':
+            if self.cleaned_data['category'] is None:
+                raise ValidationError('Category required if not selecting all media types.')
+        return self.cleaned_data.get('category', None)
         # else:
         #     raise ValidationError('Category required if not selecting all media types.')
         # elif self.cleaned_data['category'] not in categories:
@@ -107,7 +114,7 @@ class QuestionFieldVal(ModelForm):
         # elif len(categories) == 0:
         #     self.cleaned_data['category'] = None
 
-        return self.cleaned_data.get('category', None)
+        # return self.cleaned_data.get('category', None)
 
 
 class Meta:
