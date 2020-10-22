@@ -157,6 +157,7 @@ class SurveyAdminForm(ModelForm):
 
 class SurveyQuestionInline(admin.TabularInline):
     model = QuestionSet.surveys.through
+    insert_after = 'survey123_service'
     # ordering = ['sort_order']
 
 
@@ -165,9 +166,11 @@ class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
     form = SurveyAdminForm
     list_display = ['name', 'base_service_ready', 'survey_service_ready']
+    exclude = ['service_config']
 
-    fields = ['name', 'base_map_service', 'layer', 'survey123_service', 'service_config', 'selected_features']
+    fields = ['name', 'base_map_service', 'layer', 'survey123_service', 'selected_features']
     actions = [download_xls_action, load_selected_records_action]
+    change_form_template = 'admin/QuestionLibrary/Survey/change_form.html'
 
     def save_model(self, request, obj, form, change):
         # obj.user = request.user
@@ -189,10 +192,3 @@ class QuestionSetAdmin(admin.ModelAdmin):
     list_display = ['name', 'owner']
     fields = ['name', 'owner']
     inlines = [QuestionSetInline]
-
-# class JobsInlines(admin.TabularInline):
-#     model = Survey
-#
-# @admin.register(Job)
-# class JobsAdmin(admin.ModelAdmin):
-#     inlines = [JobsInlines]
