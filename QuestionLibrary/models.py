@@ -34,9 +34,12 @@ class LookupAbstract(models.Model):
 class LookupGroup(LookupAbstract):
     pass
 
+    class Meta:
+        verbose_name="Response Type"
 
 class Lookup(LookupAbstract):
     group = models.ForeignKey('LookupGroup', on_delete=models.CASCADE, related_name='lookups')
+
 
 
 class Media(LookupAbstract):
@@ -73,6 +76,8 @@ class ResponseType(LookupAbstract):
     pass
 
     survey123_field_type = models.CharField(max_length=50)
+    class Meta:
+        verbose_name="ESRI Response Type"
 
 
 class Unit(LookupAbstract):
@@ -93,11 +98,11 @@ class MasterQuestion(models.Model):
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
     category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
     facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
-    response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT)
-    lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True)
+    response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT, verbose_name='Survey123 Field Type')
+    lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True, verbose_name='Response Type')
     # todo: triggers creation of second field for survey generation if not none
     default_unit = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True,
-                                     help_text='To set a default vales ..... etc')
+                                     help_text='To generate a list of default values, select desired response type and click "Save and Continue Editing"')
 
     # todo: does question active make sense in here or just in the survey itself?
     # question_active = models.BooleanField(default=True)

@@ -56,6 +56,7 @@ class LookupGroupAdmin(admin.ModelAdmin):
     inlines = [LookupInline]
 
 
+
 class QuestionFieldVal(ModelForm):
     def __init__(self, *args, **kwargs):
         super(QuestionFieldVal, self).__init__(*args, **kwargs)
@@ -73,20 +74,37 @@ class QuestionFieldVal(ModelForm):
         if media is not None:
             categories_queryset = Category.objects.filter(media=media)
             self.fields['category'].queryset = categories_queryset
+
             if categories_queryset.count() > 0:
                 self.fields['category'].required = True
 
+        # response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'response_type', None)
+        # # lookup = self.cleaned_data['lookup'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'lookup', None)
+        # if response_type is not None:
+        #     self.fields['lookup'].required = False
+        #     if response_type.label == 'select_one':
+        #         self.fields['lookup'].required = True
+
+
     def clean_lookup(self):
-        if LookupGroup.objects.filter(
-                label=self.cleaned_data.get('response_type', None)).exists() and not self.cleaned_data.get('lookup',
-                                                                                                           None):
-            raise ValidationError('Select proper Lookup')
+        response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'response_type', None)
+
+        if response_type.label == 'select_one':
+            if self.cleaned_data['lookup'] is None:
+                raise ValidationError('Lookup required if Response Type is select_one.')
         return self.cleaned_data.get('lookup', None)
 
+
     def clean_category(self):
-        categories = Category.objects.filter(media=self.cleaned_data['media'])
-        if len(categories) == 0:
-            self.cleaned_data['category'] = None
+        # categories = Category.objects.filter(media=self.cleaned_data['media'])
+        # if len(categories) == 0:
+        #     self.cleaned_data['category'] = None
+        category = self.cleaned_data['category'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'category', None)
+
+        if category != 'All':
+            if self.cleaned_data['category'] is None:
+                raise ValidationError('Category required if not selecting all media types.')
+        return self.cleaned_data.get('category', None)
         # else:
         #     raise ValidationError('Category required if not selecting all media types.')
         # elif self.cleaned_data['category'] not in categories:
@@ -97,11 +115,12 @@ class QuestionFieldVal(ModelForm):
         # elif len(categories) == 0:
         #     self.cleaned_data['category'] = None
 
-        return self.cleaned_data.get('category', None)
+        # return self.cleaned_data.get('category', None)
 
-    class Meta:
-        model = MasterQuestion
-        exclude = []
+
+class Meta:
+    model = MasterQuestion
+    exclude = []
 
 
 @admin.register(MasterQuestion)
@@ -115,7 +134,6 @@ class MasterQuestionAdmin(admin.ModelAdmin):
     #     if db_field.name == "facility_type":
     #         kwargs["queryset"] = FacilityType.objects.filter(category=self.)
     #     return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
 
 
 class SurveyAdminForm(ModelForm):
