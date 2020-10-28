@@ -130,11 +130,14 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_category_field_relevant(self):
-        return f"${{base_facility_inventory_Fac_Type}}='{self.facility_type}'"
+        if self.facility_type is not None and self.media is not None:
+            return f"${{base_inventory_media}}='{self.media.label}' and ${{base_facility_inventory_Fac_Type}}='{self.facility_type}'"
+        else:
+            return f"${{base_inventory_media}}='{self.media.label}'"
 
-    @property
-    def formatted_survey_media_field_relevant(self):
-        return f"${{base_inventory_media}}='{self.media.label}'"
+    # @property
+    # def formatted_survey_media_field_relevant(self):
+    #     return f"${{base_inventory_media}}='{self.media.label}'"
 
     # @property
     # def formatted_survey_bwn_date_field_relevant(self):
@@ -155,15 +158,15 @@ class MasterQuestion(models.Model):
                 'type': 'begin_group',
                 'name': self.formatted_survey_field_name,
                 'label': self.question,
-                'relevant': f"{self.formatted_survey_media_field_relevant} and {self.formatted_survey_category_field_relevant}",
+                'relevant': f" {self.formatted_survey_category_field_relevant}",
             },
                 {
-                    'type': self.formatted_survey_field_type,
+                    'type': self.formatted_survey_field_type.lower(),
                     'name': f'{self.formatted_survey_field_name}_measure',
                     'label': 'Measure'
                 },
                 {
-                    'type': f'select_one {self.lookup.label}',
+                    'type': f'select_one {self.lookup.label.lower()}',
                     'name': f'{self.formatted_survey_field_name}_choices',
                     'label': self.lookup.description,
                     'default': getattr(self.default_unit, 'label', None)
@@ -175,10 +178,10 @@ class MasterQuestion(models.Model):
             ]
 
         return [{
-            'type': self.formatted_survey_field_type,
+            'type': self.formatted_survey_field_type.lower(),
             'name': self.formatted_survey_field_name,
             'label': self.question,
-            'relevant': f"{self.formatted_survey_media_field_relevant} and {self.formatted_survey_category_field_relevant}",
+            'relevant': f"{self.formatted_survey_category_field_relevant}",
         }]
 
 
