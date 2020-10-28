@@ -3,8 +3,8 @@ from .models import *
 from django.forms import ModelForm, ModelChoiceField, CharField, HiddenInput
 from django import forms
 from django.core.exceptions import ValidationError
-import requests, json
-from django.http.response import HttpResponse
+import json
+from django.contrib.admin.widgets import AutocompleteSelect
 
 from .views import download_xls_action, load_selected_records_action
 
@@ -129,6 +129,7 @@ class MasterQuestionAdmin(admin.ModelAdmin):
     list_filter = ['media', 'category', 'facility_type']
     search_fields = ['question']
     list_display = ['question', 'media', 'category', 'facility_type']
+    ordering = ['question']
     # #
     # def formfield_for_foreignkey(self, db_field, request, **kwargs):
     #     if db_field.name == "facility_type":
@@ -178,11 +179,33 @@ class SurveyAdmin(admin.ModelAdmin):
 
 # todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
 
+class QuestionSetInlineForm(forms.ModelForm):
+    class Meta:
+        fields = ('question',)
+        widgets = {
+            'question': AutocompleteSelect(
+                MasterQuestion.question,
+                admin.site,
+                attrs={'style': 'width: 400px'}  # You can put any width you want.
+            ),
+        }
+
+class QuestionSetInlineForm(forms.ModelForm):
+    class Meta:
+        widgets = {
+            'question': AutocompleteSelect(
+                QuestionSet.questions.through._meta.get_field('question').remote_field,
+                admin.site,
+                attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 600px;'}
+            ),
+        }
 
 class QuestionSetInline(admin.TabularInline):
     model = QuestionSet.questions.through
     ordering = ['sort_order']
     autocomplete_fields = ['question']
+    form = QuestionSetInlineForm
+
 
 @admin.register(QuestionSet)
 class QuestionSetAdmin(admin.ModelAdmin):
