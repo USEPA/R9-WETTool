@@ -182,7 +182,7 @@ class SurveyAdmin(admin.ModelAdmin):
 class QuestionSetInline(admin.TabularInline):
     model = QuestionSet.questions.through
     ordering = ['sort_order']
-
+    autocomplete_fields = ['question']
 
 @admin.register(QuestionSet)
 class QuestionSetAdmin(admin.ModelAdmin):
