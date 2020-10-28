@@ -16,11 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.urls import path, include
-from QuestionLibrary.views import EsriProxy, download_xls_action
+from QuestionLibrary.views import EsriProxy, download_xls_action, webhook
 admin.site.site_header = 'WET Tool'
 
 urlpatterns = [
     path(f'{settings.URL_PREFIX}', admin.site.urls),
+    path(f'{settings.URL_PREFIX}webhook/', webhook),
     path(f'{settings.URL_PREFIX}oauth2/', include('social_django.urls', namespace='social_django')),
     path(f'{settings.URL_PREFIX}proxy/', EsriProxy.as_view()),
 ]

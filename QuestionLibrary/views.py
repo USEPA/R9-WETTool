@@ -10,6 +10,8 @@ from QuestionLibrary.models import *
 from wsgiref.util import FileWrapper
 import csv
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+import json
 
 
 @method_decorator(login_required, name='dispatch')
@@ -99,3 +101,14 @@ def load_selected_records_action(modeladmin, request, queryset):
 
 
 load_selected_records_action.short_description = 'Load Selected Records to Survey123'
+
+
+def webhook(request):
+    payload = json.loads(request.body)
+    # response = requests.get(f"{request.data['portalInfo']['url']}/sharing/rest/community/self",
+    #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
+    # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
+    #     raise PermissionDenied
+
+
+    return HttpResponse()
