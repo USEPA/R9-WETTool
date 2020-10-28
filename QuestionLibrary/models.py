@@ -108,7 +108,7 @@ class MasterQuestion(models.Model):
     # todo: is anything or everything required
 
     def __str__(self):
-        return self.question
+        return f"{self.question} ({self.media.label})"
 
     @property
     def formatted_survey_field_type(self):

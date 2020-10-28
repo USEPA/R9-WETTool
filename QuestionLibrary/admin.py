@@ -107,9 +107,9 @@ class QuestionFieldVal(ModelForm):
 @admin.register(MasterQuestion)
 class MasterQuestionAdmin(admin.ModelAdmin):
     form = QuestionFieldVal
-    list_filter = ['category__media']
+    list_filter = ['media', 'category', 'facility_type']
     search_fields = ['question']
-
+    list_display = ['question', 'media', 'category', 'facility_type']
     # #
     # def formfield_for_foreignkey(self, db_field, request, **kwargs):
     #     if db_field.name == "facility_type":
