@@ -335,37 +335,49 @@ class Survey(models.Model):
 
                 object_ids = selected
 
+
                 if len(object_ids) == 0:
                     break
                 else:
                     result_offset += 10
                     # get features in origin layer
 
+                p = {"where": "1=1",
+                     "objectIds": ','.join(object_ids),
+                     # "resultOffset": result_offset,
+                     # "resultRecordCount": 10,
+                     "outFields": "*",
+                     'token': token,
+                     'f': 'json'}
+
+                params = '&'.join([f'{k}={v}' for k,v in p.items()])
+
                 q = requests.get(url=self.base_map_service + '/' + str(self.layer) + '/query',
-                                 params={"where": "1=1",
-                                         "objectIds": ','.join(object_ids),
-                                         # "resultOffset": result_offset,
-                                         # "resultRecordCount": 10,
-                                         "outFields": "*",
-                                         'token': token,
-                                         'f': 'json'})
+                                 params=params)
                 layer_name = origin_layer['name']
 
                 # object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
 
                 # get the related layer
                 for related_layer in [y for y in origin_layer['relationships']]:  # esriRelRoleDestination
+                    p = {"objectIds": ','.join(object_ids),
+                         "relationshipId": related_layer['id'],
+                         "outFields": "*",
+                         'token': token,
+                         'f': 'json'}
+                    params = '&'.join([f'{k}={v}' for k, v in p.items()])
                     related_responses[related_layer['name']] = requests.get(
                         url=self.base_map_service + '/' + str(self.layer) + '/queryRelatedRecords',
-                        params={"objectIds": ','.join(object_ids),
-                                "relationshipId": related_layer['id'],
-                                "outFields": "*",
-                                'token': token,
-                                'f': 'json'})
+                        params=params)
 
                     # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
                 for origin_feature in q.json()['features']:
                     # loop through relationships to get all features in all related layers
+                    feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',None)}
+
+                    for k, v in origin_feature['attributes'].items():
+                        feature['attributes'][self.formattedFieldName(layer_name, k)] = v
+
                     for related_layer_name, related_response in related_responses.items():
                         related_features = [z['relatedRecords'][0] for z in
                                             related_response.json()['relatedRecordGroups']
@@ -375,19 +387,15 @@ class Survey(models.Model):
                             # this is fair dynamic but geometry needs to be captured correctly
                             # this should work correctly based on our current understanding of how the data is structured and fall back to
                             # the origin geometry if related records isn't the for some reason
-                            feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',
-                                                                                        related_feature.get(
-                                                                                            'geometry',
-                                                                                            None))}
+                            if feature.get('geometry', None) is None:
+                                feature['geometry'] = related_feature.get('geometry', None)
+
 
                             for k, v in related_feature['attributes'].items():
                                 feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
 
-                            for k, v in origin_feature['attributes'].items():
-                                feature['attributes'][self.formattedFieldName(layer_name, k)] = v
-
-                            features.append(feature)
-                            print(feature)
+                    features.append(feature)
+                    print(feature)
 
                 # print(features)
         return features
