@@ -16,7 +16,7 @@ from django.utils.html import format_html
 
 
 class LookupAbstract(models.Model):
-    label = models.CharField(max_length=50, help_text='This is a test')
+    label = models.CharField(max_length=50, help_text='like this')
     description = models.CharField(max_length=500, null=True, blank=True)
 
     def __str__(self):
@@ -26,6 +26,7 @@ class LookupAbstract(models.Model):
     @property
     def formatted_survey_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.label.lower()).replace(" ", "_")
+
 
     class Meta:
         abstract = True
@@ -44,6 +45,7 @@ class Lookup(LookupAbstract):
 
 class Media(LookupAbstract):
     pass
+
 
 
 # # todo: if this is to be more generic then Water should not be used here... SubType perhaps is better?
@@ -131,9 +133,9 @@ class MasterQuestion(models.Model):
     @property
     def formatted_survey_category_field_relevant(self):
         if self.facility_type is not None and self.media is not None:
-            return f"${{base_inventory_media}}='{self.media.label}' and ${{base_facility_inventory_Fac_Type}}='{self.facility_type}'"
+            return f"${{base_facility_inventory_media}}='{self.media.description}' and ${{base_facility_inventory_Fac_Type}}='{self.facility_type.fac_code}'"
         else:
-            return f"${{base_inventory_media}}='{self.media.label}'"
+            return f"${{base_facility_inventory_media}}='{self.media.description}'"
 
     # @property
     # def formatted_survey_media_field_relevant(self):
