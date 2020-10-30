@@ -16,7 +16,7 @@ from django.utils.html import format_html
 
 
 class LookupAbstract(models.Model):
-    label = models.CharField(max_length=50, help_text='This is a test')
+    label = models.CharField(max_length=50, help_text='like this')
     description = models.CharField(max_length=500, null=True, blank=True)
 
     def __str__(self):
@@ -26,6 +26,7 @@ class LookupAbstract(models.Model):
     @property
     def formatted_survey_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.label.lower()).replace(" ", "_")
+
 
     class Meta:
         abstract = True
@@ -44,6 +45,7 @@ class Lookup(LookupAbstract):
 
 class Media(LookupAbstract):
     pass
+
 
 
 # # todo: if this is to be more generic then Water should not be used here... SubType perhaps is better?
@@ -130,11 +132,14 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_category_field_relevant(self):
-        return f"${{base_facility_inventory_Fac_Type}}='{self.facility_type}'"
+        if self.facility_type is not None and self.media is not None:
+            return f"${{base_facility_inventory_media}}='{self.media.description}' and ${{base_facility_inventory_Fac_Type}}='{self.facility_type.fac_code}'"
+        else:
+            return f"${{base_facility_inventory_media}}='{self.media.description}'"
 
-    @property
-    def formatted_survey_media_field_relevant(self):
-        return f"${{base_inventory_media}}='{self.media.label}'"
+    # @property
+    # def formatted_survey_media_field_relevant(self):
+    #     return f"${{base_inventory_media}}='{self.media.label}'"
 
     # @property
     # def formatted_survey_bwn_date_field_relevant(self):
@@ -155,15 +160,15 @@ class MasterQuestion(models.Model):
                 'type': 'begin_group',
                 'name': self.formatted_survey_field_name,
                 'label': self.question,
-                'relevant': f"{self.formatted_survey_media_field_relevant} and {self.formatted_survey_category_field_relevant}",
+                'relevant': f" {self.formatted_survey_category_field_relevant}",
             },
                 {
-                    'type': self.formatted_survey_field_type,
+                    'type': self.formatted_survey_field_type.lower(),
                     'name': f'{self.formatted_survey_field_name}_measure',
                     'label': 'Measure'
                 },
                 {
-                    'type': f'select_one {self.lookup.label}',
+                    'type': f'select_one {self.lookup.label.lower()}',
                     'name': f'{self.formatted_survey_field_name}_choices',
                     'label': self.lookup.description,
                     'default': getattr(self.default_unit, 'label', None)
@@ -175,10 +180,10 @@ class MasterQuestion(models.Model):
             ]
 
         return [{
-            'type': self.formatted_survey_field_type,
+            'type': self.formatted_survey_field_type.lower(),
             'name': self.formatted_survey_field_name,
             'label': self.question,
-            'relevant': f"{self.formatted_survey_media_field_relevant} and {self.formatted_survey_category_field_relevant}",
+            'relevant': f"{self.formatted_survey_category_field_relevant}",
         }]
 
 
@@ -332,37 +337,49 @@ class Survey(models.Model):
 
                 object_ids = selected
 
+
                 if len(object_ids) == 0:
                     break
                 else:
                     result_offset += 10
                     # get features in origin layer
 
+                p = {"where": "1=1",
+                     "objectIds": ','.join(object_ids),
+                     # "resultOffset": result_offset,
+                     # "resultRecordCount": 10,
+                     "outFields": "*",
+                     'token': token,
+                     'f': 'json'}
+
+                params = '&'.join([f'{k}={v}' for k,v in p.items()])
+
                 q = requests.get(url=self.base_map_service + '/' + str(self.layer) + '/query',
-                                 params={"where": "1=1",
-                                         "objectIds": ','.join(object_ids),
-                                         # "resultOffset": result_offset,
-                                         # "resultRecordCount": 10,
-                                         "outFields": "*",
-                                         'token': token,
-                                         'f': 'json'})
+                                 params=params)
                 layer_name = origin_layer['name']
 
                 # object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
 
                 # get the related layer
                 for related_layer in [y for y in origin_layer['relationships']]:  # esriRelRoleDestination
+                    p = {"objectIds": ','.join(object_ids),
+                         "relationshipId": related_layer['id'],
+                         "outFields": "*",
+                         'token': token,
+                         'f': 'json'}
+                    params = '&'.join([f'{k}={v}' for k, v in p.items()])
                     related_responses[related_layer['name']] = requests.get(
                         url=self.base_map_service + '/' + str(self.layer) + '/queryRelatedRecords',
-                        params={"objectIds": ','.join(object_ids),
-                                "relationshipId": related_layer['id'],
-                                "outFields": "*",
-                                'token': token,
-                                'f': 'json'})
+                        params=params)
 
                     # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
                 for origin_feature in q.json()['features']:
                     # loop through relationships to get all features in all related layers
+                    feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',None)}
+
+                    for k, v in origin_feature['attributes'].items():
+                        feature['attributes'][self.formattedFieldName(layer_name, k)] = v
+
                     for related_layer_name, related_response in related_responses.items():
                         related_features = [z['relatedRecords'][0] for z in
                                             related_response.json()['relatedRecordGroups']
@@ -372,19 +389,15 @@ class Survey(models.Model):
                             # this is fair dynamic but geometry needs to be captured correctly
                             # this should work correctly based on our current understanding of how the data is structured and fall back to
                             # the origin geometry if related records isn't the for some reason
-                            feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',
-                                                                                        related_feature.get(
-                                                                                            'geometry',
-                                                                                            None))}
+                            if feature.get('geometry', None) is None:
+                                feature['geometry'] = related_feature.get('geometry', None)
+
 
                             for k, v in related_feature['attributes'].items():
                                 feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
 
-                            for k, v in origin_feature['attributes'].items():
-                                feature['attributes'][self.formattedFieldName(layer_name, k)] = v
-
-                            features.append(feature)
-                            print(feature)
+                    features.append(feature)
+                    print(feature)
 
                 # print(features)
         return features

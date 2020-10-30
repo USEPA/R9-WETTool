@@ -8,14 +8,28 @@ from django.contrib.admin.widgets import AutocompleteSelect
 
 from .views import download_xls_action, load_selected_records_action
 
+# class MediaForm(ModelForm):
+#     class Meta:
+#         model = Media
+#         exclude =[]
+#         def __init__(self, *args, **kwargs):
+#             # initial = kwargs.get('initial', {})
+#             # initial['label'] = 'Media'
+#             # kwargs['initial'] = initial
+#             # # super(MediaForm, self).__init__(*args, **kwargs)
+
+
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
+    list_display = ['label', 'description']
+    # form= MediaForm
     pass
 
 
 @admin.register(FacilityType)
 class FacilityTypeAdmin(admin.ModelAdmin):
+    list_display = ['facility_type', 'fac_code', 'category']
     pass
 
 
@@ -179,16 +193,6 @@ class SurveyAdmin(admin.ModelAdmin):
 
 # todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
 
-class QuestionSetInlineForm(forms.ModelForm):
-    class Meta:
-        fields = ('question',)
-        widgets = {
-            'question': AutocompleteSelect(
-                MasterQuestion.question,
-                admin.site,
-                attrs={'style': 'width: 400px'}  # You can put any width you want.
-            ),
-        }
 
 class QuestionSetInlineForm(forms.ModelForm):
     class Meta:
@@ -196,9 +200,10 @@ class QuestionSetInlineForm(forms.ModelForm):
             'question': AutocompleteSelect(
                 QuestionSet.questions.through._meta.get_field('question').remote_field,
                 admin.site,
-                attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 600px;'}
+                attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
             ),
         }
+
 
 class QuestionSetInline(admin.TabularInline):
     model = QuestionSet.questions.through
