@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 import json
 
+from django.views.decorators.csrf import csrf_exempt
 
 @method_decorator(login_required, name='dispatch')
 class EsriProxy(View):
@@ -102,13 +103,23 @@ def load_selected_records_action(modeladmin, request, queryset):
 
 load_selected_records_action.short_description = 'Load Selected Records to Survey123'
 
-
+@csrf_exempt
 def webhook(request):
     payload = json.loads(request.body)
-    # response = requests.get(f"{request.data['portalInfo']['url']}/sharing/rest/community/self",
+    print (payload)
+    features =[]
+    # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
     #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
     # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
     #     raise PermissionDenied
+    for feature in payload['feature']:
 
+        # update_features = {'attributes': {},'geometry': feature['geometry']}
+        #
+        # for k,v in payload['feature']['attributes'].items():
+        update_features = feature
 
-    return HttpResponse()
+        features.append(update_features)
+    print (features)
+
+    return HttpResponse('Reponse ok')

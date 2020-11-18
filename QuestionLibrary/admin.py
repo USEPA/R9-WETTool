@@ -224,3 +224,7 @@ class QuestionSetAdmin(admin.ModelAdmin):
 # @admin.register(Job)
 # class JobsAdmin(admin.ModelAdmin):
 #     inlines = [JobsInlines]
+
+@admin.register(SurveyResponse)
+class SurveyResponseAdmin(admin.ModelAdmin):
+    pass

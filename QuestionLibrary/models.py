@@ -468,8 +468,5 @@ class QuestionList(models.Model):
     active = models.BooleanField(default=True)
     sort_order = models.IntegerField(null=True, blank=True)
 
-# class Job(models.Model):
-#     name = models.CharField(max_length=250)
-#     job_date = models.DateTimeField()
-#     job_due_date = models.DateTimeField()
-#     assessment = models.ManyToManyField('Survey')
+class SurveyResponse(models.Model):
+    response = models.TextField(null=True, blank=True)

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'agol_oauth2',
     'social_django',
     'debug_toolbar',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -53,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware'
 ]
 
 ROOT_URLCONF = 'WETTool.urls'
@@ -151,3 +153,6 @@ LOGIN_REDIRECT_URL = f'/{URL_PREFIX}'
 STATIC_URL = f'/{URL_PREFIX}static/'
 
 STATIC_ROOT = 'static'
+
+CORS_ORIGIN_ALLOW_ALL = True # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
+CORS_ALLOW_CREDENTIALS = True
