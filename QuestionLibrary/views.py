@@ -107,21 +107,18 @@ load_selected_records_action.short_description = 'Load Selected Records to Surve
 def webhook(request):
     body_unicode = request.body.decode('utf-8')
     payload = json.loads(body_unicode)
-    print (payload)
+    # print (payload)
     features =[]
     # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
     #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
     # # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
     # #     raise PermissionDenied
     # print (response)
+    update_features = {'attributes': {}, 'geometry': payload['feature'].get('geometry', None)}
     for k,v in payload['feature']['attributes'].items():
-                update_features = {'attributes': {},'geometry': payload['feature'].get('geometry', None )}
-        #
-                # for k,v in feature['attributes']:
-                update_features['attributes'][k] = v
+        update_features['attributes'][k]=v
+        features.append(update_features)
 
-                features.append(update_features)
-
-    # print (features)
-    html = "<html><body>It is now %s.</body></html>"
+    print (features)
+    html = "<html><body>It is now %s.</body></html>"%features
     return HttpResponse(html)
