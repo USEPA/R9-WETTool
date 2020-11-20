@@ -107,18 +107,20 @@ load_selected_records_action.short_description = 'Load Selected Records to Surve
 def webhook(request):
     body_unicode = request.body.decode('utf-8')
     payload = json.loads(body_unicode)
-    # print (payload)
-    features =[]
+    origin_features =[]
+    updated_features = []
+    cleaned_features =[]
     # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
     #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
     # # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
     # #     raise PermissionDenied
-    # print (response)
-    update_features = {'attributes': {}, 'geometry': payload['feature'].get('geometry', None)}
-    for k,v in payload['feature']['attributes'].items():
-        update_features['attributes'][k]=v
-        features.append(update_features)
+    origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
 
-    print (features)
-    html = "<html><body>It is now %s.</body></html>"%features
+    for k in payload['applyEdits']:
+        for m in k['updates']:
+            updated = {'attributes': {}, 'geometry': m['geometry']}
+            for n, v in m['attributes'].items():
+                updated['attributes'][n.replace("base_inventory_", "").replace("base_facility_inventory_", "")]= v
+                updated_features.append(updated)
+    html = "<html><body>It is now %s.</body></html>"%updated_features
     return HttpResponse(html)
