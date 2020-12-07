@@ -258,12 +258,19 @@ class Survey(models.Model):
         settings_df = pd.DataFrame(layer)
         # choices_df = orig_choices_df.append(settings_df)
 
+        survey_status = [{
+            'type': 'text',
+            'name': 'survey_status',
+            'label': 'Survey Status',
+            'default': "In Progress"}]
+        status_df = pd.DataFrame(survey_status)
+
         questions = []
         for x in assigned_questions:
             questions.extend(x.get_formatted_question())
-
         questions_df = pd.DataFrame(questions)
-        survey_df_all = [questions_df, field_df_drop_dups]
+        # all_questions_df = [questions_df, status_df]
+        survey_df_all = [questions_df, status_df, field_df_drop_dups]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
@@ -290,6 +297,7 @@ class Survey(models.Model):
 
         with pd.ExcelWriter(output_survey, mode='w') as writer:
             survey_df.to_excel(writer, sheet_name='survey', index=False)
+            # status_df.to_excel(writer, sheet_name='survey', index=False)
             choices_df.to_excel(writer, sheet_name='choices', index=False)
             settings_df.to_excel(writer, sheet_name='settings', index=False)
         # return questions_df, choices_df

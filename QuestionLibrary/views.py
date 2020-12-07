@@ -12,8 +12,10 @@ import csv
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 import json
-
+from social_django.utils import load_strategy
+from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
 
 @method_decorator(login_required, name='dispatch')
 class EsriProxy(View):
@@ -108,19 +110,28 @@ def webhook(request):
     body_unicode = request.body.decode('utf-8')
     payload = json.loads(body_unicode)
     origin_features =[]
-    updated_features = []
-    cleaned_features =[]
+    #grab the survery and user info to display in the admin?
+    updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
     # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
     #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
     # # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
     # #     raise PermissionDenied
+
+    #not sure if we will need origin_feature at any point
     origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
 
+    # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
     for k in payload['applyEdits']:
         for m in k['updates']:
+            if m['attributes']['survey_status'] == 'in_progress':
+                m['attributes']['survey_status'] = 'needs_review'
             updated = {'attributes': {}, 'geometry': m['geometry']}
             for n, v in m['attributes'].items():
                 updated['attributes'][n.replace("base_inventory_", "").replace("base_facility_inventory_", "")]= v
-                updated_features.append(updated)
-    html = "<html><body>It is now %s.</body></html>"%updated_features
-    return HttpResponse(html)
+            updated_features.append(updated)
+
+    return HttpResponse("Ok")
+
+
+
+
