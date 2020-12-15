@@ -22,7 +22,8 @@
 
         let host = SITE_PROTOCOL + "{{ request.META.HTTP_HOST }}";
     </script>
-<script src="{% static 'point_selection.js' %}" type="text/javascript"></script>
+    <script src="{% static 'point_selection.js' %}" type="text/javascript"></script>
+    <script src="{% static 'survey_results_review.js' %}" type="text/javascript"></script>
 {% endblock %}
 
 {% block extrastyle %}{{ block.super }}
@@ -101,8 +102,11 @@
                         <h2>AVAILABLE FEATURES</h2>
                         <div id="featuresTable" style="height: 500px; overflow-x: auto;" class="ag-theme-balham"></div>
                     </fieldset>
+                    <fieldset class="module" style="height: 500px; padding-bottom: 15px;">
+                        <h2>FEATURES FOR REVIEW</h2>
+                        <div id="featuresReviewTable" style="height: 500px; overflow-x: auto;" class="ag-theme-balham"></div>
+                    </fieldset>
                 {% endblock %}
-
                 {% block inline_field_sets %}
                     {% for inline_admin_formset in inline_admin_formsets %}
                         {% include inline_admin_formset.opts.template %}

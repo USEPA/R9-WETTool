@@ -126,8 +126,8 @@ def webhook(request):
             if m['attributes']['survey_status'] == 'in_progress':
                 m['attributes']['survey_status'] = 'needs_review'
             updated = {'attributes': {}, 'geometry': m['geometry']}
-            for n, v in m['attributes'].items():
-                updated['attributes'][n.replace("base_inventory_", "").replace("base_facility_inventory_", "")]= v
+            # for n, v in m['attributes'].items():
+            #     updated['attributes'][n.replace("base_inventory_", "").replace("base_facility_inventory_", "")]= v
             updated_features.append(updated)
 
     return HttpResponse("Ok")
