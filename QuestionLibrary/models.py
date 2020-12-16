@@ -139,6 +139,14 @@ class MasterQuestion(models.Model):
         else:
             return f"${{base_facility_inventory_media}}='{self.media.description}'"
 
+    def relevant_for_feature(self, feature):
+        if self.facility_type is not None and self.media is not None:
+            return feature['base_facility_inventory_media'] == self.media.description and \
+                   feature['base_facility_inventory_Fac_Type'] == self.facility_type.fac_code
+
+        return feature['base_facility_inventory_media'] == self.media.description
+
+
     # @property
     # def formatted_survey_media_field_relevant(self):
     #     return f"${{base_inventory_media}}='{self.media.label}'"
@@ -404,6 +412,12 @@ class Survey(models.Model):
 
                             for k, v in related_feature['attributes'].items():
                                 feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
+
+                    # set default values for survey123 questions for existing features from base data
+                    for question_set in self.question_set.all():
+                        for question in question_set.questions.all():
+                            if question.relevant_for_feature(feature) and question.default_unit is not None:
+                                feature['attributes'][question.formatted_survey_field_name] = question.default_unit.description
 
                     features.append(feature)
                     print(feature)
