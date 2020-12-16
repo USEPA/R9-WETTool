@@ -132,19 +132,18 @@ class MasterQuestion(models.Model):
     def formatted_survey_field_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
 
-    @property
-    def formatted_survey_category_field_relevant(self):
+    def formatted_survey_category_field_relevant(self, layer_id):
         if self.facility_type is not None and self.media is not None:
-            return f"${{base_facility_inventory_media}}='{self.media.description}' and ${{base_facility_inventory_Fac_Type}}='{self.facility_type.fac_code}'"
+            return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
         else:
-            return f"${{base_facility_inventory_media}}='{self.media.description}'"
+            return f"${{layer_{layer_id}_media}}='{self.media.description}'"
 
-    def relevant_for_feature(self, feature):
+    def relevant_for_feature(self, feature, layer_id):
         if self.facility_type is not None and self.media is not None:
-            return feature['base_facility_inventory_media'] == self.media.description and \
-                   feature['base_facility_inventory_Fac_Type'] == self.facility_type.fac_code
+            return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description and \
+                   feature['attributes'][f'layer_{layer_id}Fac_Type'] == self.facility_type.fac_code
 
-        return feature['base_facility_inventory_media'] == self.media.description
+        return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description
 
 
     # @property
@@ -163,14 +162,14 @@ class MasterQuestion(models.Model):
     #         return
     #     return f"${{boil_water_notice}}='yes'"
 
-    def get_formatted_question(self):
+    def get_formatted_question(self, layer_index):
         # must always return a list
         if self.lookup is not None and self.response_type.survey123_field_type != 'select_one':
             return [{
                 'type': 'begin_group',
                 'name': self.formatted_survey_field_name,
                 'label': self.question,
-                'relevant': f" {self.formatted_survey_category_field_relevant}",
+                'relevant': f" {self.formatted_survey_category_field_relevant(layer_index)}",
             },
                 {
                     'type': self.formatted_survey_field_type.lower(),
@@ -193,7 +192,7 @@ class MasterQuestion(models.Model):
             'type': self.formatted_survey_field_type.lower(),
             'name': self.formatted_survey_field_name,
             'label': self.question,
-            'relevant': f"{self.formatted_survey_category_field_relevant}",
+            'relevant': f"{self.formatted_survey_category_field_relevant(layer_index)}",
         }]
 
 
@@ -217,6 +216,7 @@ class Survey(models.Model):
 
     selected_features = models.TextField(null=True, blank=True)
     layer = models.TextField(null=True, blank=True)
+    assessment_layer = models.TextField(null=True, blank=True)
 
     # color_code = models.CharField(max_length=6)
 
@@ -262,7 +262,7 @@ class Survey(models.Model):
         layer = [{
             'form_title': self.name,
             'form_id': '',
-            'instance_name': 'concat("ID: " +${base_inventory_SystemID}, " ",  "System Name: "+${base_inventory_SystemName}, " ", "System Status: " + ${base_inventory_ActivityStatus})',
+            # 'instance_name': 'concat("ID: " +${base_inventory_SystemID}, " ",  "System Name: "+${base_inventory_SystemName}, " ", "System Status: " + ${base_inventory_ActivityStatus})',
 
         }]
         settings_df = pd.DataFrame(layer)
@@ -276,7 +276,7 @@ class Survey(models.Model):
 
         questions = []
         for x in assigned_questions:
-            questions.extend(x.get_formatted_question())
+            questions.extend(x.get_formatted_question(self.layer))
         questions_df = pd.DataFrame(questions)
         # all_questions_df = [questions_df, status_df]
         survey_df_all = [questions_df, status_df, field_df_drop_dups]
@@ -311,19 +311,23 @@ class Survey(models.Model):
             settings_df.to_excel(writer, sheet_name='settings', index=False)
         # return questions_df, choices_df
 
-    def formattedFieldName(self, layer_name, field_name):
-        return f"{layer_name.lower().replace(' ', '_')}_{field_name}"
+    def formattedFieldName(self, layer_id, field_name):
+        return f"layer_{layer_id}_{field_name}"
 
     def getLayers(self, service, user):
         layers = []
+        tables = []
         social = user.social_auth.get(provider='agol')
         token = social.get_access_token(load_strategy())
         r = requests.get(url=service, params={'token': token, 'f': 'json'})
         for x in r.json()['layers']:
             q = requests.get(url=service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
             layers.append(q.json())
+        for x in r.json()['tables']:
+            q = requests.get(url=service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
+            tables.append(q.json())
 
-        self.service_config = json.dumps(layers)
+        self.service_config = json.dumps({"layers": layers, "tables": tables})
 
     def getMapService(self, user):
         if not self.service_config:
@@ -338,7 +342,7 @@ class Survey(models.Model):
         token = social.get_access_token(load_strategy())
         # r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
 
-        service_config_layers = json.loads(self.service_config)
+        service_config_layers = json.loads(self.service_config)['layers']
         # get layers that serve a origin in relationship
         # origin_layers = [x for x in service_config_layers if
         #                  x['id'] = self.layer]
@@ -385,7 +389,7 @@ class Survey(models.Model):
                          'token': token,
                          'f': 'json'}
                     params = '&'.join([f'{k}={v}' for k, v in p.items()])
-                    related_responses[related_layer['name']] = requests.get(
+                    related_responses[related_layer['id']] = requests.get(
                         url=self.base_map_service + '/' + str(self.layer) + '/queryRelatedRecords',
                         params=params)
 
@@ -395,9 +399,9 @@ class Survey(models.Model):
                     feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',None)}
 
                     for k, v in origin_feature['attributes'].items():
-                        feature['attributes'][self.formattedFieldName(layer_name, k)] = v
+                        feature['attributes'][self.formattedFieldName(x['id'], k)] = v
 
-                    for related_layer_name, related_response in related_responses.items():
+                    for related_layer_id, related_response in related_responses.items():
                         related_features = [z['relatedRecords'][0] for z in
                                             related_response.json()['relatedRecordGroups']
                                             if z['objectId'] == origin_feature['attributes']['OBJECTID']]
@@ -411,13 +415,13 @@ class Survey(models.Model):
 
 
                             for k, v in related_feature['attributes'].items():
-                                feature['attributes'][self.formattedFieldName(related_layer_name, k)] = v
+                                feature['attributes'][self.formattedFieldName(related_layer_id, k)] = v
 
                     # set default values for survey123 questions for existing features from base data
                     for question_set in self.question_set.all():
                         for question in question_set.questions.all():
-                            if question.relevant_for_feature(feature) and question.default_unit is not None:
-                                feature['attributes'][question.formatted_survey_field_name] = question.default_unit.description
+                            if question.relevant_for_feature(feature, self.layer) and question.default_unit is not None:
+                                feature['attributes'][f'{question.formatted_survey_field_name}_choices'] = question.default_unit.description
 
                     features.append(feature)
                     print(feature)
@@ -435,7 +439,7 @@ class Survey(models.Model):
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
         print (r)
     def get_formatted_fields(self):
-        feat_service = json.loads(self.service_config)
+        feat_service = json.loads(self.service_config)['layers']
         fields = []
         omit_fields = {'FACID', 'FACdetailID' 'created_user', 'created_date',
                        'AlternateTextID', 'SystemTextIDPublic', 'FederalSystemType',
@@ -447,19 +451,19 @@ class Survey(models.Model):
                 if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
                     fields.append({
                         'type': 'hidden',
-                        'name': self.formattedFieldName(x['name'], y['name']),
+                        'name': self.formattedFieldName(x['id'], y['name']),
                         'label': y['alias'],
                     })
                 elif y['name'] in omit_fields:
                     fields.append({
                         'type': 'hidden',
-                        'name': self.formattedFieldName(x['name'], y['name']),
+                        'name': self.formattedFieldName(x['id'], y['name']),
                         'label': y['alias'],
                     })
                 else:
                     fields.append({
                         'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                        'name': self.formattedFieldName(x['name'], y['name']),
+                        'name': self.formattedFieldName(x['id'], y['name']),
                         'label': y['alias']
                     })
 

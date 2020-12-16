@@ -156,14 +156,19 @@ class SurveyAdminForm(ModelForm):
 
     # define an init here
     layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
+    assessment_layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.service_config is not None:
             config = json.loads(self.instance.service_config)
 
-            layer_choice = [(x['id'], x['name']) for x in config]
-            self.fields['layer'].choices = layer_choice
+            if type(config) is dict:
+                layer_choice = [(x['id'], x['name']) for x in config['layers']]
+                self.fields['layer'].choices = layer_choice
+
+                layer_choice = [(x['id'], x['name']) for x in config['tables']]
+                self.fields['assessment_layer'].choices = layer_choice
 
     class Meta:
         model = Survey
@@ -181,7 +186,7 @@ class SurveyAdmin(admin.ModelAdmin):
     form = SurveyAdminForm
     list_display = ['name', 'base_service_ready', 'survey_service_ready']
 
-    fields = ['name', 'base_map_service', 'layer', 'survey123_service', 'service_config', 'selected_features']
+    fields = ['name', 'base_map_service', 'layer', 'assessment_layer', 'survey123_service', 'service_config', 'selected_features']
     actions = [download_xls_action, load_selected_records_action]
 
     def save_model(self, request, obj, form, change):
