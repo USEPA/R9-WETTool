@@ -46,7 +46,8 @@
                     var gridOptions;
 
                     function getFeatures() {
-                        fl.queryFeatures({"where": "1=1", "outFields": "*"}).then(function (featureSet) {
+                        //query service for incomplete records
+                        fl.queryFeatures({"where": "survey_status is null", "outFields": "*"}).then(function (featureSet) {
                             // todo: deal with getting more features if max returned
                             allFeatures = allFeatures.concat(featureSet.features);
                             var features = featureSet.features.map(f => f.attributes);
@@ -72,52 +73,92 @@
                                 rowData: features,
                                 onFirstDataRendered: function (e) {
                                     e.columnApi.autoSizeAllColumns();
-                                    highlightFeatures();
+                                    // highlightFeatures();
                                 },
                                 onRowClicked: function (e) {
                                     selectFeatures([e.node.data.OBJECTID], !e.node.isSelected())
                                 }
                             }
-                            var gridDiv = document.querySelector('#featuresReviewTable');
+                            var gridDiv = document.querySelector('#featuresIncompleteTable');
                             new agGrid.Grid(gridDiv, gridOptions);
 
                         });
 
                     }
-                    function selectFeatures(ids, remove) {
-                        var current_selection = getCurrentSelection();
-                        if (remove) {
-                            var new_selection = current_selection.filter(id => !ids.includes(id))
-                        } else {
-                            var new_selection = new Set(current_selection.concat(ids));
-                        }
-                        document.getElementById('id_selected_features').value = [...new_selection].join(',');
-                        highlightFeatures();
-                    }
+                    //query service and generate table for records that need review
+                     fl.queryFeatures({"where": "survey_status = 'needs_review'", "outFields": "*"}).then(function (featureSet) {
+                            // todo: deal with getting more features if max returned
+                            allFeatures = allFeatures.concat(featureSet.features);
+                            var features = featureSet.features.map(f => f.attributes);
+                            var columnDefs = featureSet.fields
+                            //.filter(f => ! ['OBJECTID','created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name))
+                                .map(f => {
+                                    var columnDef = {"headerName": f.alias, "field": f.name};
+                                    if (['OBJECTID', 'created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name)) {
+                                        columnDef['hide'] = true
+                                    }
+                                    return columnDef;
+                                });
+                            gridOptions = {
+                                defaultColDef: {
+                                    flex: 1,
+                                    sortable: true,
+                                    filter: true,
+                                    floatingFilter: true,
+                                },
+                                rowSelection: 'multiple',
+                                rowMultiSelectWithClick: true,
+                                columnDefs: columnDefs,
+                                rowData: features,
+                                onFirstDataRendered: function (e) {
+                                    e.columnApi.autoSizeAllColumns();
+                                    // highlightFeatures();
+                                },
+                                onRowClicked: function (e) {
+                                    selectFeatures([e.node.data.OBJECTID], !e.node.isSelected())
+                                }
+                            };
+                            var gridDiv = document.querySelector('#featuresReviewTable');
+                            new agGrid.Grid(gridDiv, gridOptions);
 
-                    var highlight;
-
-                    function highlightFeatures() {
-                        var current_selection = getCurrentSelection();
-                        gridOptions.api.forEachNode(function (node) {
-                            node.setSelected(current_selection.includes(node.data.OBJECTID));
                         });
+                     //guery service for records that are complete
+                     fl.queryFeatures({"where": "survey_status = 'complete'", "outFields": "*"}).then(function (featureSet) {
+                            // todo: deal with getting more features if max returned
+                            allFeatures = allFeatures.concat(featureSet.features);
+                            var features = featureSet.features.map(f => f.attributes);
+                            var columnDefs = featureSet.fields
+                            //.filter(f => ! ['OBJECTID','created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name))
+                                .map(f => {
+                                    var columnDef = {"headerName": f.alias, "field": f.name};
+                                    if (['OBJECTID', 'created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name)) {
+                                        columnDef['hide'] = true
+                                    }
+                                    return columnDef;
+                                });
+                            gridOptions = {
+                                defaultColDef: {
+                                    flex: 1,
+                                    sortable: true,
+                                    filter: true,
+                                    floatingFilter: true,
+                                },
+                                rowSelection: 'multiple',
+                                rowMultiSelectWithClick: true,
+                                columnDefs: columnDefs,
+                                rowData: features,
+                                onFirstDataRendered: function (e) {
+                                    e.columnApi.autoSizeAllColumns();
+                                    // highlightFeatures();
+                                },
+                                onRowClicked: function (e) {
+                                    selectFeatures([e.node.data.OBJECTID], !e.node.isSelected())
+                                }
+                            };
+                            var gridDiv = document.querySelector('#featuresCompleteTable');
+                            new agGrid.Grid(gridDiv, gridOptions);
 
-                        view.whenLayerView(fl).then(layerView => {
-                            if (highlight) {
-                                highlight.remove();
-                            }
-                            var selected_features = allFeatures.filter(f => current_selection.includes(f.attributes.OBJECTID))
-                            highlight = layerView.highlight(selected_features);
                         });
-                    }
-
-                    function getCurrentSelection() {
-                        return document.getElementById('id_selected_features').value
-                            .split(',')
-                            .filter(id => id !== "")
-                            .map(id => parseInt(id, 10))
-                    }
 
                 }
             });

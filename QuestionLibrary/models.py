@@ -70,6 +70,8 @@ class Category(LookupAbstract):
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
     # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
     # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
+    class Meta:
+        verbose_name='Categorie'
 
 
 # todo: more closely link this with survey123.  Maybe allow input of the cross walk so its configurable and dynamic
@@ -259,10 +261,9 @@ class Survey(models.Model):
         # choices_df = orig_choices_df.append(settings_df)
 
         survey_status = [{
-            'type': 'text',
+            'type': 'hidden',
             'name': 'survey_status',
-            'label': 'Survey Status',
-            'default': "In Progress"}]
+            'label': 'Survey Status'}]
         status_df = pd.DataFrame(survey_status)
 
         questions = []
@@ -418,7 +419,7 @@ class Survey(models.Model):
 
         r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-
+        print (r)
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)
         fields = []

@@ -123,11 +123,11 @@ def webhook(request):
     # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
     for k in payload['applyEdits']:
         for m in k['updates']:
-            if m['attributes']['survey_status'] == 'in_progress':
+            if m['attributes']['survey_status'] == '':
                 m['attributes']['survey_status'] = 'needs_review'
             updated = {'attributes': {}, 'geometry': m['geometry']}
-            # for n, v in m['attributes'].items():
-            #     updated['attributes'][n.replace("base_inventory_", "").replace("base_facility_inventory_", "")]= v
+            for n, v in m['attributes'].items():
+                updated['attributes'][n.replace("base_inventory_", "").replace("base_facility_inventory_", "")]= v
             updated_features.append(updated)
 
     return HttpResponse("Ok")
