@@ -5,7 +5,7 @@
         // Load the Map and MapView modules
         require(["esri/Map", "esri/views/MapView", "esri/widgets/Sketch", "esri/layers/FeatureLayer",
                 "esri/layers/GraphicsLayer", "esri/Graphic", "esri/geometry/projection", "esri/geometry/Point", "esri/layers/VectorTileLayer",
-                'esri/core/urlUtils', 'esri/config', "esri/widgets/Fullscreen", "esri/widgets/FeatureTable"],
+                'esri/core/urlUtils', 'esri/config', "esri/widgets/Fullscreen", "esri/widgets/FeatureTable", "esri/widgets/Popup"],
             function (Map, MapView, Sketch, FeatureLayer, GraphicsLayer, Graphic, projection, Point, VectorTileLayer,
                       urlUtils, esriConfig, Fullscreen, FeatureTable) {
                 esriConfig.request.trustedServers.push(host);
@@ -81,7 +81,6 @@
                     const fullscreen = new Fullscreen({
                         view: view
                     });
-
                     view.ui.add(sketch, "top-right");
                     view.on("immediate-click", event => {
                         view.hitTest(event).then(response => {

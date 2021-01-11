@@ -30,6 +30,7 @@ class MediaAdmin(admin.ModelAdmin):
 @admin.register(FacilityType)
 class FacilityTypeAdmin(admin.ModelAdmin):
     list_display = ['facility_type', 'fac_code', 'category']
+    list_filter = ['category','facility_type' ]
     pass
 
 
@@ -156,7 +157,7 @@ class SurveyAdminForm(ModelForm):
 
     # define an init here
     layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
-    assessment_layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
+    assessment_layer = forms.ChoiceField(choices=[], label='Response Layer', required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
