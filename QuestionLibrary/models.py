@@ -141,7 +141,7 @@ class MasterQuestion(models.Model):
     def relevant_for_feature(self, feature, layer_id):
         if self.facility_type is not None and self.media is not None:
             return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description and \
-                   feature['attributes'][f'layer_{layer_id}Fac_Type'] == self.facility_type.fac_code
+                   feature['attributes'][f'layer_{layer_id}_Fac_Type'] == self.facility_type.fac_code
 
         return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description
 
@@ -442,7 +442,7 @@ class Survey(models.Model):
         feat_service = json.loads(self.service_config)['layers']
         fields = []
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
-                       'last_edited_user', 'last_edited_date', 'OBJECTID'}
+                       'last_edited_user', 'last_edited_date', 'OBJECTID', 'pws_fac_id'}
 
         # todo do these need to be hidden or do the need to be left out completely
         #todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment

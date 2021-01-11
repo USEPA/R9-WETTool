@@ -165,16 +165,20 @@ def webhook(request):
                     if original_attribute in master_questions:
                         assessment_responses.append({'attributes': {
                             'question': master_questions[original_attribute],
-                            'answer': v,
-                            'units': payload['feature']['attributes'][f"{original_attribute}_choices"]
+                            'response': v,
+                            'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
+                            'facility_id': payload['feature']['attributes']['layer_1_pws_system_id']
                         }})
                 elif k.endswith('_choices'):
                     pass
                 elif k in master_questions:
                     assessment_responses.append({'attributes': {
                         'question': master_questions[k],
-                        'answer': v
+                        'response': v,
+                        'facility_id': payload['feature']['attributes']['layer_1_pws_system_id']
+
                     }})
+
 
         data = {'adds': json.dumps(assessment_responses)}
         requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
