@@ -45,6 +45,9 @@ class Lookup(LookupAbstract):
 
 class Media(LookupAbstract):
     pass
+    # class Meta:
+    #     verbose_name = '1. Media'
+
 
 
 
@@ -70,8 +73,8 @@ class Category(LookupAbstract):
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
     # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
     # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
-    class Meta:
-        verbose_name='Categorie'
+    # class Meta:
+    #     verbose_name='2. Categories'
 
 
 # todo: more closely link this with survey123.  Maybe allow input of the cross walk so its configurable and dynamic

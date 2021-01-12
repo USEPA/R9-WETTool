@@ -33,6 +33,7 @@ ALLOWED_HOSTS = getattr(local_settings, 'ALLOWED_HOSTS', [])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
+    'admin_reorder',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -54,7 +55,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware'
+    'corsheaders.middleware.CorsMiddleware',
+    'admin_reorder.middleware.ModelAdminReorder'
 ]
 
 ROOT_URLCONF = 'WETTool.urls'
@@ -156,3 +158,27 @@ STATIC_ROOT = 'static'
 
 CORS_ORIGIN_ALLOW_ALL = True # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
 CORS_ALLOW_CREDENTIALS = True
+
+ADMIN_REORDER = (
+    # Keep original label and models
+    'sites',
+    {'app': 'auth', 'models': (
+        'auth.Group',
+        {'model': 'auth.User', 'label': 'Staff'},
+    )},
+
+    {'app': 'social_django', 'label': 'ArcGIS User Settings', 'models': (
+        'social_django.Group',
+        {'model': 'social_django.UserSocialAuth', 'label': 'ArcGIS User Authorization'},
+        {'model': 'social_django.Association', 'label': 'Associations'},
+        {'model': 'social_django.Nonce', 'label': 'Nonces'},
+    )},
+    {'app': 'QuestionLibrary', 'models': (
+        {'model': 'QuestionLibrary.Media', 'label': 'Media'},
+        {'model': 'QuestionLibrary.Category', 'label': 'Category'},
+        {'model': 'QuestionLibrary.FacilityType', 'label': 'Facility Type'},
+        {'model': 'QuestionLibrary.MasterQuestion', 'label': 'Question List'},
+        {'model': 'QuestionLibrary.QuestionSet', 'label': 'Question Sets'},
+        {'model': 'QuestionLibrary.Survey', 'label': 'Assessments'},
+     )},
+)

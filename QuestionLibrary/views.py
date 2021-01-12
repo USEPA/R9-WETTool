@@ -157,7 +157,6 @@ def webhook(request):
         table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
         master_questions = {q.formatted_survey_field_name: q.question for q in MasterQuestion.objects.all()}
         assessment_responses = []
-        # todo: add foreign key back to parent feature
         for k, v in payload['feature']['attributes'].items():
             if not k.startswith('layer'):
                 if k.endswith('_measure'):

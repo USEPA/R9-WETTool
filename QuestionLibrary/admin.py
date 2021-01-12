@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, sites
 from .models import *
 from django.forms import ModelForm, ModelChoiceField, CharField, HiddenInput
 from django import forms
@@ -17,6 +17,7 @@ from .views import download_xls_action, load_selected_records_action
 #             # initial['label'] = 'Media'
 #             # kwargs['initial'] = initial
 #             # # super(MediaForm, self).__init__(*args, **kwargs)
+
 
 
 
