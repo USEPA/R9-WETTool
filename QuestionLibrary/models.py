@@ -73,8 +73,9 @@ class Category(LookupAbstract):
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
     # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
     # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
-    # class Meta:
-    #     verbose_name='2. Categories'
+    class Meta:
+        verbose_name = 'Category'
+        verbose_name_plural='Categories'
 
 
 # todo: more closely link this with survey123.  Maybe allow input of the cross walk so its configurable and dynamic
@@ -496,6 +497,10 @@ class QuestionSet(models.Model):
     surveys = models.ManyToManyField('Survey', related_name='question_set')
     questions = models.ManyToManyField('MasterQuestion', related_name='question_set', through='QuestionList')
     sort_order = models.IntegerField(null=True, blank=True)
+    media = models.ForeignKey('Media', on_delete=models.PROTECT, null=True, blank=True)
+    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
+    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
+
 
     def __str__(self):
         return self.name

@@ -7,6 +7,7 @@ import json
 from django.contrib.admin.widgets import AutocompleteSelect
 
 from .views import download_xls_action, load_selected_records_action
+from fieldsets_with_inlines import FieldsetsInlineMixin
 
 # class MediaForm(ModelForm):
 #     class Meta:
@@ -43,6 +44,8 @@ class FacilityTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
+    list_display = ['label','media']
+    list_filter = ['media']
     pass
 
 
@@ -182,13 +185,15 @@ class SurveyQuestionInline(admin.TabularInline):
     # ordering = ['sort_order']
 
 
+
 @admin.register(Survey)
-class SurveyAdmin(admin.ModelAdmin):
+class SurveyAdmin( admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
+
     form = SurveyAdminForm
     list_display = ['name', 'base_service_ready', 'survey_service_ready']
 
-    fields = ['name', 'base_map_service', 'layer', 'assessment_layer', 'survey123_service', 'service_config', 'selected_features']
+    fields = ['name', 'base_map_service', 'layer', 'assessment_layer', 'survey123_service', 'selected_features']
     actions = [download_xls_action, load_selected_records_action]
 
     def save_model(self, request, obj, form, change):
@@ -202,6 +207,17 @@ class SurveyAdmin(admin.ModelAdmin):
 
 
 class QuestionSetInlineForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(QuestionSetInlineForm, self).__init__(*args, **kwargs)
+        # self.fields['default_unit'].queryset = Lookup.objects.filter(group=self.instance.lookup)
+        # self.fields['facility_type'].queryset = FacilityType.objects.none()
+        # if self.instance.category_id is not None:
+        #     try:
+        #         # category_id = int(self.data.get('category'))
+        #         self.fields['question'].queryset = FacilityType.objects.filter(category=self.instance.category_id)
+        #     except (ValueError, TypeError):
+        #         pass
+
     class Meta:
         widgets = {
             'question': AutocompleteSelect(
@@ -222,16 +238,7 @@ class QuestionSetInline(admin.TabularInline):
 @admin.register(QuestionSet)
 class QuestionSetAdmin(admin.ModelAdmin):
     list_display = ['name', 'owner']
-    fields = ['name', 'owner']
+    fields = ['name', 'owner', 'media', 'category', 'facility_type']
+    # forms = QuestionSetFilters
     inlines = [QuestionSetInline]
 
-# class JobsInlines(admin.TabularInline):
-#     model = Survey
-#
-# @admin.register(Job)
-# class JobsAdmin(admin.ModelAdmin):
-#     inlines = [JobsInlines]
-#
-# @admin.register(SurveyResponse)
-# class SurveyResponseAdmin(admin.ModelAdmin):
-#     pass

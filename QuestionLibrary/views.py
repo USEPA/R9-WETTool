@@ -166,7 +166,7 @@ def webhook(request):
                             'question': master_questions[original_attribute],
                             'response': v,
                             'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
-                            'facility_id': payload['feature']['attributes']['layer_1_pws_system_id']
+                            'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
                         }})
                 elif k.endswith('_choices'):
                     pass
@@ -174,7 +174,7 @@ def webhook(request):
                     assessment_responses.append({'attributes': {
                         'question': master_questions[k],
                         'response': v,
-                        'facility_id': payload['feature']['attributes']['layer_1_pws_system_id']
+                        'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
 
                     }})
 

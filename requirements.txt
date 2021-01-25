@@ -6,3 +6,4 @@ xlrd
 git+https://github.com/Innovate-Inc/django-agol-oauth2.git@master#egg=django-agol-oauth2==0.0.3
 django-debug-toolbar
 django-modeladmin-reorder
+django-fieldsets-with-inlines
