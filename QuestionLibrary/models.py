@@ -136,6 +136,11 @@ class MasterQuestion(models.Model):
     def formatted_survey_field_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
 
+    # def relevant_for_op_status(self, layer_id):
+    #     if self.question == ('What is the operational status of the drinking water system?') == 'Partially Operational':
+    #         return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_}}=''
+
+
     def formatted_survey_category_field_relevant(self, layer_id):
         if self.facility_type is not None and self.media is not None:
             return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
