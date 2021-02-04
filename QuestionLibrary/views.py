@@ -126,62 +126,60 @@ def webhook(request):
     # origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
     token = payload['portalInfo']['token']
     # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
-    for features in payload['applyEdits']:
-        base_service_config = json.loads(survey.service_config)['layers']
-        # todo: deal with new features and how that affects creating records in related tables
-        for layer in base_service_config:
-            layer_prefix = f"layer_{layer['id']}_"
+    base_service_config = json.loads(survey.service_config)['layers']
+    # todo: deal with new features and how that affects creating records in related tables
+    for layer in base_service_config:
+        layer_prefix = f"layer_{layer['id']}_"
 
-            # translate fields for this service into their original name and post back
-            f = {'attributes': {}}
-            for k, v in payload['feature']['attributes'].items():
-                if k.startswith(layer_prefix):
-                    f['attributes'][k.replace(layer_prefix, "")] = v
-
-            # if layer is the base layer holding geometry grab it and put it there
-            if layer['id'] == survey.layer:
-                f['geometry'] = payload['feature'].get('geometry', None)
-
-
-            data = {'adds' if payload['eventType'] == 'addData' else
-                    ('updates' if payload['eventType'] == 'editData' else None): [json.dumps(f)]}
-
-            # todo: for updates look for existing record and copy to history table
-
-            response = requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits", params={'token': token, 'f': 'json'},
-                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-
-            # if m['attributes']['survey_status'] == '':
-            #     m['attributes']['survey_status'] = 'needs_review'
-            # updated = {'attributes': {}, 'geometry': m['geometry']}
-        table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
-        master_questions = {q.formatted_survey_field_name: q.question for q in MasterQuestion.objects.all()}
-        assessment_responses = []
+        # translate fields for this service into their original name and post back
+        f = {'attributes': {}}
         for k, v in payload['feature']['attributes'].items():
-            if not k.startswith('layer'):
-                if k.endswith('_measure'):
-                    original_attribute = k.replace('_measure', '')
-                    if original_attribute in master_questions:
-                        assessment_responses.append({'attributes': {
-                            'question': master_questions[original_attribute],
-                            'response': v,
-                            'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
-                            'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
-                        }})
-                elif k.endswith('_choices'):
-                    pass
-                elif k in master_questions:
+            if k.startswith(layer_prefix):
+                f['attributes'][k.replace(layer_prefix, "")] = v
+
+        # if layer is the base layer holding geometry grab it and put it there
+        if layer['id'] == survey.layer:
+            f['geometry'] = payload['feature'].get('geometry', None)
+
+        data = {'adds' if payload['eventType'] == 'addData' else
+                ('updates' if payload['eventType'] == 'editData' else None): [json.dumps(f)]}
+
+        # todo: for updates look for existing record and copy to history table
+
+        response = requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
+                                 params={'token': token, 'f': 'json'},
+                                 data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+
+        # if m['attributes']['survey_status'] == '':
+        #     m['attributes']['survey_status'] = 'needs_review'
+        # updated = {'attributes': {}, 'geometry': m['geometry']}
+    table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
+    master_questions = {q.formatted_survey_field_name: q.question for q in MasterQuestion.objects.all()}
+    assessment_responses = []
+    for k, v in payload['feature']['attributes'].items():
+        if not k.startswith('layer'):
+            if k.endswith('_measure'):
+                original_attribute = k.replace('_measure', '')
+                if original_attribute in master_questions:
                     assessment_responses.append({'attributes': {
-                        'question': master_questions[k],
+                        'question': master_questions[original_attribute],
                         'response': v,
+                        'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
                         'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
-
                     }})
+            elif k.endswith('_choices'):
+                pass
+            elif k in master_questions:
+                assessment_responses.append({'attributes': {
+                    'question': master_questions[k],
+                    'response': v,
+                    'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
 
+                }})
 
-        data = {'adds': json.dumps(assessment_responses)}
-        requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
-                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+    data = {'adds': json.dumps(assessment_responses)}
+    requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
+                  data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
     return HttpResponse("Ok")
 

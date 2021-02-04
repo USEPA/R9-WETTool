@@ -9,6 +9,7 @@ from django.contrib.admin.widgets import AutocompleteSelect
 from .views import download_xls_action, load_selected_records_action
 from fieldsets_with_inlines import FieldsetsInlineMixin
 
+
 # class MediaForm(ModelForm):
 #     class Meta:
 #         model = Media
@@ -18,8 +19,6 @@ from fieldsets_with_inlines import FieldsetsInlineMixin
 #             # initial['label'] = 'Media'
 #             # kwargs['initial'] = initial
 #             # # super(MediaForm, self).__init__(*args, **kwargs)
-
-
 
 
 @admin.register(Media)
@@ -32,7 +31,7 @@ class MediaAdmin(admin.ModelAdmin):
 @admin.register(FacilityType)
 class FacilityTypeAdmin(admin.ModelAdmin):
     list_display = ['facility_type', 'fac_code', 'category']
-    list_filter = ['category','facility_type' ]
+    list_filter = ['category', 'facility_type']
     pass
 
 
@@ -44,7 +43,7 @@ class FacilityTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['label','media']
+    list_display = ['label', 'media']
     list_filter = ['media']
     pass
 
@@ -75,7 +74,6 @@ class LookupGroupAdmin(admin.ModelAdmin):
     inlines = [LookupInline]
 
 
-
 class QuestionFieldVal(ModelForm):
     def __init__(self, *args, **kwargs):
         super(QuestionFieldVal, self).__init__(*args, **kwargs)
@@ -104,21 +102,22 @@ class QuestionFieldVal(ModelForm):
         #     if response_type.label == 'select_one':
         #         self.fields['lookup'].required = True
 
-
     def clean_lookup(self):
-        response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'response_type', None)
+        response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance,
+                                                                                                         'response_type',
+                                                                                                         None)
 
         if response_type.label == 'select_one':
             if self.cleaned_data['lookup'] is None:
                 raise ValidationError('Lookup required if Response Type is select_one.')
         return self.cleaned_data.get('lookup', None)
 
-
     def clean_category(self):
         # categories = Category.objects.filter(media=self.cleaned_data['media'])
         # if len(categories) == 0:
         #     self.cleaned_data['category'] = None
-        category = self.cleaned_data['category'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'category', None)
+        category = self.cleaned_data['category'] if hasattr(self, 'cleaned_data') else getattr(self.instance,
+                                                                                               'category', None)
 
         if category != 'All':
             if self.cleaned_data['category'] is None:
@@ -142,9 +141,40 @@ class Meta:
     exclude = []
 
 
+class RelatedQuestionInlineForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(RelatedQuestionInlineForm, self).__init__(*args, **kwargs)
+
+        if self.instance.question_id is not None:
+            self.fields['relevant_field'].queryset = Lookup.objects.filter(group=self.instance.question.lookup)
+
+
+    class Meta:
+        widgets = {
+            'question': AutocompleteSelect(
+                MasterQuestion.related_questions.through._meta.get_field('question').remote_field,
+                admin.site,
+                attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
+            ),
+        }
+
+
+class MasterQuestionRelatedQuestionInline(admin.TabularInline):
+    fields = ['related', 'relevant_field']
+    model = MasterQuestion.related_questions.through
+    fk_name = 'question'
+    form = RelatedQuestionInlineForm
+
+
+@admin.register(RelatedQuestionList)
+class RelatedQuestionListAdmin(admin.ModelAdmin):
+    pass
+
+
 @admin.register(MasterQuestion)
 class MasterQuestionAdmin(admin.ModelAdmin):
     form = QuestionFieldVal
+    inlines = [MasterQuestionRelatedQuestionInline]
     list_filter = ['media', 'category', 'facility_type']
     search_fields = ['question']
     list_display = ['question', 'media', 'category', 'facility_type']
@@ -185,9 +215,8 @@ class SurveyQuestionInline(admin.TabularInline):
     # ordering = ['sort_order']
 
 
-
 @admin.register(Survey)
-class SurveyAdmin( admin.ModelAdmin):
+class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
 
     form = SurveyAdminForm
@@ -242,3 +271,23 @@ class QuestionSetAdmin(admin.ModelAdmin):
     # forms = QuestionSetFilters
     inlines = [QuestionSetInline]
 
+# class RelatedQuestionInlineForm(forms.ModelForm):
+#     def __init__(self, *args, **kwargs):
+#         super(RelatedQuestionInlineForm, self).__init__(*args, **kwargs)
+#         # self.fields['default_unit'].queryset = Lookup.objects.filter(group=self.instance.lookup)
+#         # self.fields['facility_type'].queryset = FacilityType.objects.none()
+#         # if self.instance.category_id is not None:
+#         #     try:
+#         #         # category_id = int(self.data.get('category'))
+#         #         self.fields['question'].queryset = FacilityType.objects.filter(category=self.instance.category_id)
+#         #     except (ValueError, TypeError):
+#         #         pass
+#
+#     class Meta:
+#         widgets = {
+#             'question': AutocompleteSelect(
+#                 RelatedQuestionList.questions.through._meta.get_field('question').remote_field,
+#                 admin.site,
+#                 attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
+#             ),
+#         }

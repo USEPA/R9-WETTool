@@ -101,6 +101,7 @@ class FeatureServiceResponse(models.Model):
 
 class MasterQuestion(models.Model):
     question = models.TextField(max_length=1000)
+    # related_question = models.ManyToManyField('self', blank=True)
 
     # todo: why is media here and in category
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
@@ -111,6 +112,7 @@ class MasterQuestion(models.Model):
     # todo: triggers creation of second field for survey generation if not none
     default_unit = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True,
                                      help_text='To generate a list of default values, select desired response type and click "Save and Continue Editing"')
+    related_questions = models.ManyToManyField('self', related_name='related_question', through='RelatedQuestionList', symmetrical=False)
 
     # todo: does question active make sense in here or just in the survey itself?
     # question_active = models.BooleanField(default=True)
@@ -136,10 +138,6 @@ class MasterQuestion(models.Model):
     def formatted_survey_field_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
 
-    # def relevant_for_op_status(self, layer_id):
-    #     if self.question == ('What is the operational status of the drinking water system?') == 'Partially Operational':
-    #         return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_}}=''
-
 
     def formatted_survey_category_field_relevant(self, layer_id):
         if self.facility_type is not None and self.media is not None:
@@ -154,22 +152,6 @@ class MasterQuestion(models.Model):
 
         return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description
 
-
-    # @property
-    # def formatted_survey_media_field_relevant(self):
-    #     return f"${{base_inventory_media}}='{self.media.label}'"
-
-    # @property
-    # def formatted_survey_bwn_date_field_relevant(self):
-    #     if self.question == "On what date was the BWN issued?":
-    #         return
-    #     return f"${{boil_water_notice}}='yes'"
-    #
-    # @property
-    # def formatted_survey_bwn_redacted_field_relevant(self):
-    #     if self.question == "On what date was the BWN redacted?":
-    #         return
-    #     return f"${{boil_water_notice}}='yes'"
 
     def get_formatted_question(self, layer_index):
         # must always return a list
@@ -203,6 +185,8 @@ class MasterQuestion(models.Model):
             'label': self.question,
             'relevant': f"{self.formatted_survey_category_field_relevant(layer_index)}",
         }]
+    class Meta:
+        verbose_name = 'Master Question'
 
 
 class Survey(models.Model):
@@ -271,17 +255,17 @@ class Survey(models.Model):
         layer = [{
             'form_title': self.name,
             'form_id': '',
-            # 'instance_name': 'concat("ID: " +${base_inventory_SystemID}, " ",  "System Name: "+${base_inventory_SystemName}, " ", "System Status: " + ${base_inventory_ActivityStatus})',
+            'instance_name': 'concat("ID: " +${layer_0_SystemID}, " ",  "System Name: "+${layer_0_SystemName}, " ", "System Status: " + ${layer_0_ActivityStatus})',
 
         }]
         settings_df = pd.DataFrame(layer)
         # choices_df = orig_choices_df.append(settings_df)
         #
-        # survey_status = [{
-        #     'type': 'hidden',
-        #     'name': 'survey_status',
-        #     'label': 'Survey Status'}]
-        # status_df = pd.DataFrame(survey_status)
+        survey_status = [{
+            'type': 'hidden',
+            'name': 'survey_status',
+            'label': 'Survey Status'}]
+        status_df = pd.DataFrame(survey_status)
 
         questions = []
         for x in assigned_questions:
@@ -315,7 +299,6 @@ class Survey(models.Model):
 
         with pd.ExcelWriter(output_survey, mode='w') as writer:
             survey_df.to_excel(writer, sheet_name='survey', index=False)
-            # status_df.to_excel(writer, sheet_name='survey', index=False)
             choices_df.to_excel(writer, sheet_name='choices', index=False)
             settings_df.to_excel(writer, sheet_name='settings', index=False)
         # return questions_df, choices_df
@@ -521,3 +504,12 @@ class QuestionList(models.Model):
 
 class SurveyResponse(models.Model):
     response = models.TextField(null=True, blank=True)
+#
+# class RelatedQuestion(models.Model):
+#     questions = models.ManyToManyField('MasterQuestion', related_name='related_questions', through='RelatedQuestionList')
+#     # answer = models.IntegerField(null=True, blank=True)
+
+class RelatedQuestionList(models.Model):
+    related = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT, related_name='master_questions')
+    question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
+    relevant_field = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True)
