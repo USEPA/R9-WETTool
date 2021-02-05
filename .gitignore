@@ -1,2 +1,4 @@
 generated_forms
-local_settings.py
+WETTool/local_settings.py
+.idea/
+
