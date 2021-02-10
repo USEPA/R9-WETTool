@@ -149,14 +149,14 @@ class RelatedQuestionInlineForm(forms.ModelForm):
             self.fields['relevant_field'].queryset = Lookup.objects.filter(group=self.instance.question.lookup)
 
 
-    class Meta:
-        widgets = {
-            'question': AutocompleteSelect(
-                MasterQuestion.related_questions.through._meta.get_field('question').remote_field,
-                admin.site,
-                attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
-            ),
-        }
+    # class Meta:
+        # widgets = {
+        #     'question': AutocompleteSelect(
+        #         MasterQuestion.related_questions.through._meta.get_field('question').remote_field,
+        #         admin.site,
+        #         attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
+        #     ),
+        # }
 
 
 class MasterQuestionRelatedQuestionInline(admin.TabularInline):
