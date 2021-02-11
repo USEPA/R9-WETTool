@@ -113,7 +113,6 @@ def webhook(request):
     if payload['eventType'] not in ['addData', 'editData']:
         return HttpResponse("Ok")
     origin_features =[]
-    #grab the survery and user info to display in the admin?
     survey = Survey.objects.get(survey123_service=payload['surveyInfo']['serviceUrl'])
 
     # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
@@ -125,6 +124,18 @@ def webhook(request):
     #not sure if we will need origin_feature at any point
     # origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
     token = payload['portalInfo']['token']
+    #flip the survey status field to submitted in the survey service in
+    #the survey inbox will be filtered to only show survey status = null
+    survey_status_switch = []
+    for k, v in payload['feature']['attributes'].items():
+        if k == 'survey_status':
+            survey_status_switch.append({'attributes': {
+                'objectid': payload['feature']['attributes']['objectid'],
+                'survey_status': 'submitted'}})
+    data_status = {'updates': json.dumps(survey_status_switch)}
+    requests.post(f"{survey.survey123_service}/0/applyEdits", params={'token': token, 'f': 'json'},
+                          data=data_status, headers={'Content-type': 'application/x-www-form-urlencoded'})
+
     # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
     base_service_config = json.loads(survey.service_config)['layers']
     # todo: deal with new features and how that affects creating records in related tables
@@ -150,9 +161,6 @@ def webhook(request):
                                  params={'token': token, 'f': 'json'},
                                  data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
-        # if m['attributes']['survey_status'] == '':
-        #     m['attributes']['survey_status'] = 'needs_review'
-        # updated = {'attributes': {}, 'geometry': m['geometry']}
     table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
     master_questions = {q.formatted_survey_field_name: q.question for q in MasterQuestion.objects.all()}
     assessment_responses = []

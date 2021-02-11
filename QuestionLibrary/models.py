@@ -138,8 +138,18 @@ class MasterQuestion(models.Model):
     def formatted_survey_field_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
 
+    # def formatted_survey_relevant_questions(self, layer_id):
+    #     for r in RelatedQuestionList.objects.filter(related_id__pk=self.id):
+    #         if r is not None:
+    #             print(r.related)
+    #             return f"$selected(${r.question}, {r.relevant_field})"
 
     def formatted_survey_category_field_relevant(self, layer_id):
+        for r in RelatedQuestionList.objects.filter(related_id__pk=self.id):
+            if r is not None:
+                return f"${{layer_{layer_id}_media}}='{self.media.description}'and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.formatted_survey_name}\")"
+            if r is not None and self.facility_type is not None and self.media is not None:
+                return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.formatted_survey_name}\")"
         if self.facility_type is not None and self.media is not None:
             return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
         else:
@@ -184,6 +194,7 @@ class MasterQuestion(models.Model):
             'name': self.formatted_survey_field_name,
             'label': self.question,
             'relevant': f"{self.formatted_survey_category_field_relevant(layer_index)}",
+            'required': f"{self.formatted_survey_category_field_relevant(layer_index)}",
         }]
     class Meta:
         verbose_name = 'Master Question'
@@ -255,7 +266,7 @@ class Survey(models.Model):
         layer = [{
             'form_title': self.name,
             'form_id': '',
-            'instance_name': 'concat("ID: " +${layer_0_SystemID}, " ",  "System Name: "+${layer_0_SystemName}, " ", "System Status: " + ${layer_0_ActivityStatus})',
+            'instance_name': 'concat("System Name: "+${layer_0_SystemName}, " ", "System Status: " + ${layer_0_ActivityStatus})',
 
         }]
         settings_df = pd.DataFrame(layer)
@@ -272,7 +283,7 @@ class Survey(models.Model):
             questions.extend(x.get_formatted_question(self.layer))
         questions_df = pd.DataFrame(questions)
         # all_questions_df = [questions_df, status_df]
-        survey_df_all = [questions_df, field_df_drop_dups]
+        survey_df_all = [questions_df, field_df_drop_dups, status_df]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
