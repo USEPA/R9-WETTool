@@ -149,9 +149,9 @@ class MasterQuestion(models.Model):
             if r is not None:
                 return f"${{layer_{layer_id}_media}}='{self.media.description}'and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.formatted_survey_name}\")"
             if r is not None and self.facility_type is not None and self.media is not None:
-                return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code} and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.formatted_survey_name}\")"
+                return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.formatted_survey_name}\")"
         if self.facility_type is not None and self.media is not None:
-            return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}"
+            return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
         else:
             return f"${{layer_{layer_id}_media}}='{self.media.description}'"
 
