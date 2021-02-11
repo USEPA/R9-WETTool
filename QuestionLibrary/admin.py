@@ -9,18 +9,6 @@ from django.contrib.admin.widgets import AutocompleteSelect
 from .views import download_xls_action, load_selected_records_action
 from fieldsets_with_inlines import FieldsetsInlineMixin
 
-
-# class MediaForm(ModelForm):
-#     class Meta:
-#         model = Media
-#         exclude =[]
-#         def __init__(self, *args, **kwargs):
-#             # initial = kwargs.get('initial', {})
-#             # initial['label'] = 'Media'
-#             # kwargs['initial'] = initial
-#             # # super(MediaForm, self).__init__(*args, **kwargs)
-
-
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
     list_display = ['label', 'description']
@@ -34,13 +22,6 @@ class FacilityTypeAdmin(admin.ModelAdmin):
     list_filter = ['category', 'facility_type']
     pass
 
-
-#
-# @admin.register(FacilitySubType)
-# class FacilitySubTypeAdmin(admin.ModelAdmin):
-#     pass
-
-
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['label', 'media']
@@ -52,11 +33,6 @@ class CategoryAdmin(admin.ModelAdmin):
 class ResponseTypeAdmin(admin.ModelAdmin):
     pass
 
-
-#
-# @admin.register(Unit)
-# class UnitAdmin(admin.ModelAdmin):
-#     pass
 
 
 @admin.register(FeatureServiceResponse)
@@ -92,8 +68,8 @@ class QuestionFieldVal(ModelForm):
             categories_queryset = Category.objects.filter(media=media)
             self.fields['category'].queryset = categories_queryset
 
-            if categories_queryset.count() > 0:
-                self.fields['category'].required = True
+            # if categories_queryset.count() > 0:
+            #     self.fields['category'].required = True
 
         # response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'response_type', None)
         # # lookup = self.cleaned_data['lookup'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'lookup', None)
@@ -118,11 +94,11 @@ class QuestionFieldVal(ModelForm):
         #     self.cleaned_data['category'] = None
         category = self.cleaned_data['category'] if hasattr(self, 'cleaned_data') else getattr(self.instance,
                                                                                                'category', None)
-
-        if category != 'All':
-            if self.cleaned_data['category'] is None:
-                raise ValidationError('Category required if not selecting all media types.')
-        return self.cleaned_data.get('category', None)
+        #
+        # if category != 'All':
+        #     if self.cleaned_data['category'] is None:
+        #         raise ValidationError('Category required if not selecting all media types.')
+        # return self.cleaned_data.get('category', None)
         # else:
         #     raise ValidationError('Category required if not selecting all media types.')
         # elif self.cleaned_data['category'] not in categories:
@@ -144,25 +120,29 @@ class Meta:
 class RelatedQuestionInlineForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(RelatedQuestionInlineForm, self).__init__(*args, **kwargs)
+        #filter the related question somehow to improve performance?
+        #this obviously doesn't work since we are trying to set related questions.
+        # self.fields['related'].queryset = RelatedQuestionList.objects.all().prefetch_related('related')
 
         if self.instance.question_id is not None:
             self.fields['relevant_field'].queryset = Lookup.objects.filter(group=self.instance.question.lookup)
 
 
-    # class Meta:
-        # widgets = {
-        #     'question': AutocompleteSelect(
-        #         MasterQuestion.related_questions.through._meta.get_field('question').remote_field,
-        #         admin.site,
-        #         attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
-        #     ),
-        # }
+    class Meta:
+        widgets = {
+            'related': AutocompleteSelect(
+                MasterQuestion.related_questions.through._meta.get_field('related').remote_field,
+                admin.site,
+                attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
+            ),
+        }
 
 
 class MasterQuestionRelatedQuestionInline(admin.TabularInline):
     fields = ['related', 'relevant_field']
     model = MasterQuestion.related_questions.through
     fk_name = 'question'
+    autocomplete_fields = ['related']
     form = RelatedQuestionInlineForm
 
 
@@ -179,11 +159,6 @@ class MasterQuestionAdmin(admin.ModelAdmin):
     search_fields = ['question']
     list_display = ['question', 'media', 'category', 'facility_type']
     ordering = ['question']
-    # #
-    # def formfield_for_foreignkey(self, db_field, request, **kwargs):
-    #     if db_field.name == "facility_type":
-    #         kwargs["queryset"] = FacilityType.objects.filter(category=self.)
-    #     return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 class SurveyAdminForm(ModelForm):
@@ -270,24 +245,3 @@ class QuestionSetAdmin(admin.ModelAdmin):
     fields = ['name', 'owner', 'media', 'category', 'facility_type']
     # forms = QuestionSetFilters
     inlines = [QuestionSetInline]
-
-# class RelatedQuestionInlineForm(forms.ModelForm):
-#     def __init__(self, *args, **kwargs):
-#         super(RelatedQuestionInlineForm, self).__init__(*args, **kwargs)
-#         # self.fields['default_unit'].queryset = Lookup.objects.filter(group=self.instance.lookup)
-#         # self.fields['facility_type'].queryset = FacilityType.objects.none()
-#         # if self.instance.category_id is not None:
-#         #     try:
-#         #         # category_id = int(self.data.get('category'))
-#         #         self.fields['question'].queryset = FacilityType.objects.filter(category=self.instance.category_id)
-#         #     except (ValueError, TypeError):
-#         #         pass
-#
-#     class Meta:
-#         widgets = {
-#             'question': AutocompleteSelect(
-#                 RelatedQuestionList.questions.through._meta.get_field('question').remote_field,
-#                 admin.site,
-#                 attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
-#             ),
-#         }
