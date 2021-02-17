@@ -4,10 +4,11 @@
 
         // Load the Map and MapView modules
         require(["esri/Map", "esri/views/MapView", "esri/widgets/Sketch", "esri/layers/FeatureLayer",
-                "esri/layers/GraphicsLayer", "esri/Graphic", "esri/geometry/projection", "esri/geometry/Point", "esri/layers/VectorTileLayer",
-                'esri/core/urlUtils', 'esri/config', "esri/widgets/Fullscreen", "esri/widgets/FeatureTable", "esri/widgets/Popup"],
+                "esri/layers/GraphicsLayer", "esri/Graphic", "esri/geometry/projection", "esri/geometry/Point",
+                "esri/layers/VectorTileLayer", 'esri/core/urlUtils', 'esri/config', "esri/widgets/Fullscreen",
+                "esri/widgets/FeatureTable", "esri/widgets/Popup", "esri/widgets/LayerList", "esri/widgets/Expand"],
             function (Map, MapView, Sketch, FeatureLayer, GraphicsLayer, Graphic, projection, Point, VectorTileLayer,
-                      urlUtils, esriConfig, Fullscreen, FeatureTable) {
+                      urlUtils, esriConfig, Fullscreen, FeatureTable, Popup, LayerList, Expand) {
                 esriConfig.request.trustedServers.push(host);
                 urlUtils.addProxyRule({
                     urlPrefix: 'services.arcgis.com/cJ9YHowT8TU7DUyn',
@@ -20,26 +21,40 @@
                     }
                 });
                 var tempGraphicsLayer = new GraphicsLayer();
+                tempGraphicsLayer.listMode = 'hide';
                 var references = new VectorTileLayer("https://www.arcgis.com/sharing/rest/content/items/af6063d6906c4eb589dfe03819610660/resources/styles/root.json");
-
+                references.listMode = 'hide';
                 var editGraphic;
                 var allFeatures = [];
+
+
 
                 //var projectionPromise = projection.load();
 
                 // Create a MapView instance (for 2D viewing) and reference the map instance
+
+                const fl_node = document.getElementById('id_layer');
+                fl_node.onchange = changeFeatureLayer;
+                function changeFeatureLayer() {
+                    console.log(fl_node.value);
+                };
 
 
                 if (document.getElementById('id_base_map_service').value) {
                     var base_service = document.getElementById('id_base_map_service').value;
                     // {# todo: figure out how to id the correct layer #}
                     var fl = new FeatureLayer({
-                        url: base_service + "/1"
-                    })
+                        url: base_service + "/1",
+                        title: 'Facility Service'
+                    });
+                    var fl_0 = new FeatureLayer({
+                        url: base_service + "/0",
+                        title: 'Base Inventory'
+                    });
                     // Create a Map instance
                     var myMap = new Map({
                         basemap: 'satellite',
-                        layers: [references, fl, tempGraphicsLayer]
+                        layers: [references, fl, fl_0, tempGraphicsLayer]
                     });
                     var view = new MapView({
                         map: myMap,
@@ -49,6 +64,16 @@
                         view.extent = fl.fullExtent;
                         getFeatures();
                     });
+                    var layerlist = new LayerList({
+                      view: view
+                    });
+                    const layerListExpand = new Expand({
+                        expandIconClass: "esri-icon-layer-list",
+                        view: view,
+                        content: layerlist
+                    });
+                    view.ui.add(layerListExpand, "top-left");
+
                     const sketch = new Sketch({
                         layer: tempGraphicsLayer,
                         view: view,
@@ -65,19 +90,20 @@
                     });*/
 
                     sketch.on('update', e => {
-                        $('#mapDiv button:not([type])').attr('type', 'button')
+                        $('#mapDiv button:not([type])').attr('type', 'button');
                         if (e.state === 'complete' && !e.aborted) {
                             selectFeaturesByGeometry(e.graphics[0].geometry, false);
+                            selectFeaturesByGeometry(e.graphics[0].geometry, true);
                         }
                     });
                     sketch.on('create', e => {
                         if (e.state === 'complete') {
                             selectFeaturesByGeometry(e.graphic.geometry, false);
                         }
-                    })
+                    });
                     sketch.on('delete', e => {
                         selectFeaturesByGeometry(e.graphics[0].geometry, true);
-                    })
+                    });
                     const fullscreen = new Fullscreen({
                         view: view
                     });
