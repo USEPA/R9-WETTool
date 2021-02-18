@@ -32,7 +32,7 @@
                 let flayers = [];
                 let fl;
                 let view;
-                parseLayers();
+
                 renderMap();
 
                 // Create a MapView instance (for 2D viewing) and reference the map instance
@@ -44,6 +44,7 @@
                     renderMap();
                 }
                 function renderMap() {
+                    parseLayers();
                     if (document.getElementById('id_base_map_service').value) {
                         let fl = flayers[fl_node.options.selectedIndex];
                         // var fl = new FeatureLayer({
@@ -149,7 +150,8 @@
                         const ii = (i).toString();
                         const f = new FeatureLayer({
                             url: base_service + "/"+ii,
-                            title: fl_node.options[i].innerText
+                            title: fl_node.options[i].innerText,
+                            listMode: i !== fl_node.options.selectedIndex?"show":"hide"
                         });
                         flayers.push(f);
                     }
@@ -169,14 +171,15 @@
                                 if (['OBJECTID', 'created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name)) {
                                     columnDef['hide'] = true;
                                 }
-                                return columnDef;
+                                if(f.alias) return columnDef;
                             });
                         gridOptions = {
                             defaultColDef: {
-                                flex: 1,
+                                // flex: 1,
                                 sortable: true,
                                 filter: true,
                                 floatingFilter: true,
+                                width: 200
                             },
                             rowSelection: 'multiple',
                             rowMultiSelectWithClick: true,
