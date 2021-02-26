@@ -270,20 +270,25 @@ class Survey(models.Model):
 
         }]
         settings_df = pd.DataFrame(layer)
-        # choices_df = orig_choices_df.append(settings_df)
-        #
+        #add survey status and geopoint fields to the survey. Not sure if this is the best way to do this. works for now.
         survey_status = [{
             'type': 'hidden',
             'name': 'survey_status',
             'label': 'Survey Status'}]
         status_df = pd.DataFrame(survey_status)
 
+        geopoint = [{
+            'type': 'geopoint',
+            'name': 'geometry',
+            'label': 'Edit Geometry'}]
+        geopoint_df = pd.DataFrame(geopoint)
+
         questions = []
         for x in assigned_questions:
             questions.extend(x.get_formatted_question(self.layer))
         questions_df = pd.DataFrame(questions)
         # all_questions_df = [questions_df, status_df]
-        survey_df_all = [questions_df, field_df_drop_dups, status_df]
+        survey_df_all = [questions_df, field_df_drop_dups, status_df, geopoint_df]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
@@ -385,6 +390,7 @@ class Survey(models.Model):
                 # object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
 
                 # get the related layer
+                # todo: figure out where to pull geometry from... like froms base_facility_inventory... not the origin table
                 for related_layer in [y for y in origin_layer['relationships']]:  # esriRelRoleDestination
                     p = {"objectIds": ','.join(object_ids),
                          "relationshipId": related_layer['id'],
@@ -409,7 +415,7 @@ class Survey(models.Model):
                                             related_response.json()['relatedRecordGroups']
                                             if z['objectId'] == origin_feature['attributes']['OBJECTID']]
                         for related_feature in related_features:
-                            # todo: figure out where to pull geometry from... like froms base_facility_inventory... not the origin table
+
                             # this is fair dynamic but geometry needs to be captured correctly
                             # this should work correctly based on our current understanding of how the data is structured and fall back to
                             # the origin geometry if related records isn't the for some reason
@@ -467,18 +473,21 @@ class Survey(models.Model):
                             'type': 'hidden',
                             'name': self.formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
+                            'readonly': 'yes'
                         })
                     elif y['name'] in omit_fields:
                         fields.append({
                             'type': 'hidden',
                             'name': self.formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
+                            'readonly': 'yes'
                         })
                     else:
                         fields.append({
                             'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
                             'name': self.formattedFieldName(x['id'], y['name']),
-                            'label': y['alias']
+                            'label': y['alias'],
+                            'readonly': 'yes'
                         })
 
         return fields
