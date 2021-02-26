@@ -168,7 +168,7 @@
                         //.filter(f => ! ['OBJECTID','created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name))
                             .map(f => {
                                 var columnDef = {"headerName": f.alias, "field": f.name};
-                                if (['OBJECTID', 'created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name)) {
+                                if (['OBJECTID', 'created_date', 'created_user', 'last_edited_user', 'last_edited_date', 'AlternateTextID', 'SystemTextIDPublic', 'pws_fac_id'].includes(f.name)) {
                                     columnDef['hide'] = true;
                                 }
                                 if(f.alias) return columnDef;
