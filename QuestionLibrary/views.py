@@ -16,6 +16,7 @@ from social_django.utils import load_strategy
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
+from django.core.exceptions import ObjectDoesNotExist
 
 @method_decorator(login_required, name='dispatch')
 class EsriProxy(View):
@@ -173,15 +174,25 @@ def webhook(request):
                         'question': master_questions[original_attribute],
                         'response': v,
                         'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
-                        'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
+                        'facility_id': payload['feature']['attributes']['layer_1_FacilityID'],
+                        'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
+                        # 'display_name':
                     }})
             elif k.endswith('_choices'):
                 pass
+
             elif k in master_questions:
+                try:
+                    v_decoded = Lookup.objects.get(label=v).description
+                except ObjectDoesNotExist:
+                    v_decoded = v
                 assessment_responses.append({'attributes': {
                     'question': master_questions[k],
                     'response': v,
-                    'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
+                    'facility_id': payload['feature']['attributes']['layer_1_FacilityID'],
+                    'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
+                    'display_name': v_decoded
+
 
                 }})
 
