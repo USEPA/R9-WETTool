@@ -185,7 +185,7 @@ def webhook(request):
                 try:
                     v_decoded = Lookup.objects.get(label=v).description
                 except ObjectDoesNotExist:
-                    v_decoded = v
+                    v_decoded = None
                 assessment_responses.append({'attributes': {
                     'question': master_questions[k],
                     'response': v,
