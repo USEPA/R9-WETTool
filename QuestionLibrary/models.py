@@ -28,12 +28,14 @@ class LookupAbstract(models.Model):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.label.lower()).replace(" ", "_")
 
 
+
     class Meta:
         abstract = True
 
 
 class LookupGroup(LookupAbstract):
     pass
+
 
     class Meta:
         verbose_name="Response Type"
@@ -295,7 +297,7 @@ class Survey(models.Model):
         choices = [
             {
                 'list_name': x.group.formatted_survey_name,
-                'name': x.formatted_survey_name,
+                'name': x.label,
                 'label': x.description,
             } for x in assigned_lookups
         ]
@@ -451,7 +453,7 @@ class Survey(models.Model):
         feat_service = json.loads(self.service_config)['layers']
         fields = []
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
-                       'last_edited_user', 'last_edited_date', 'OBJECTID', 'pws_fac_id'}
+                       'last_edited_user', 'last_edited_date', 'OBJECTID'}
 
         # todo do these need to be hidden or do the need to be left out completely
         #todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment
