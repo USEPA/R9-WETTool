@@ -260,7 +260,12 @@ class Survey(models.Model):
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
         assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
         feat_service = json.loads(self.service_config)
-        fields = self.get_formatted_fields()
+        # fields = self.get_formatted_fields()
+
+        if self.layer == '0':
+            fields = self.get_formatted_survey_fields()
+        else:
+            fields = self.get_formatted_fields()
 
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
@@ -459,34 +464,52 @@ class Survey(models.Model):
         #todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment
 
         for x in feat_service:
-            if x['id'] != int(self.layer):
+            for y in x['fields']:
+                if y['name'] not in omit_fields:
+                    fields.append({
+                        'type': 'text',
+                        'name': self.formattedFieldName(x['id'], y['name']),
+                        'label': y['alias'],
+                        'readonly': 'yes'
+                    })
+        else:
+            for y in x['fields']:
+                if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+                    fields.append({
+                        'type': 'hidden',
+                        'name': self.formattedFieldName(x['id'], y['name']),
+                        'label': y['alias'],
+                        'readonly': 'yes'
+                    })
+                elif y['name'] not in omit_fields:
+                    fields.append({
+                        'type': 'hidden',
+                        'name': self.formattedFieldName(x['id'], y['name']),
+                        'label': y['alias'],
+                        'readonly': 'yes'
+                    })
+                else:
+                    fields.append({
+                        'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                        'name': self.formattedFieldName(x['id'], y['name']),
+                        'label': y['alias'],
+                        'readonly': 'yes'
+                    })
+
+        return fields
+
+    def get_formatted_survey_fields(self):
+        feat_service = json.loads(self.service_config)['layers']
+        fields = []
+        omit_fields = {'created_user', 'created_date', 'AlternateTextID',
+                       'last_edited_user', 'last_edited_date', 'OBJECTID'}
+
+        for x in feat_service:
+            if x['id'] == 0:
                 for y in x['fields']:
                     if y['name'] not in omit_fields:
                         fields.append({
                             'type': 'text',
-                            'name': self.formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
-                            'readonly': 'yes'
-                        })
-            else:
-                for y in x['fields']:
-                    if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                        fields.append({
-                            'type': 'hidden',
-                            'name': self.formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
-                            'readonly': 'yes'
-                        })
-                    elif y['name'] in omit_fields:
-                        fields.append({
-                            'type': 'hidden',
-                            'name': self.formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
-                            'readonly': 'yes'
-                        })
-                    else:
-                        fields.append({
-                            'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
                             'name': self.formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
                             'readonly': 'yes'
