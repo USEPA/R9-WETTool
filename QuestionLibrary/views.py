@@ -163,6 +163,9 @@ def webhook(request):
                                  data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
     table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
+    fac_id = None
+    if fac_id is None and payload['feature']['attributes'].items() == 'layer_1_FacilityID':
+       fac_id = payload['feature']['attributes']['layer_1_FacilityID']
     master_questions = {q.formatted_survey_field_name: q.question for q in MasterQuestion.objects.all()}
     assessment_responses = []
     for k, v in payload['feature']['attributes'].items():
@@ -174,7 +177,7 @@ def webhook(request):
                         'question': master_questions[original_attribute],
                         'response': v,
                         'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
-                        'facility_id': payload['feature']['attributes']['layer_1_FacilityID'],
+                        'facility_id': fac_id,
                         'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
                         # 'display_name':
                     }})
@@ -189,7 +192,7 @@ def webhook(request):
                 assessment_responses.append({'attributes': {
                     'question': master_questions[k],
                     'response': v,
-                    'facility_id': payload['feature']['attributes']['layer_1_FacilityID'],
+                    'facility_id':fac_id,
                     'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
                     'display_name': v_decoded
 
