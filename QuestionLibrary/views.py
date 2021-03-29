@@ -164,8 +164,10 @@ def webhook(request):
 
     table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
     fac_id = None
-    if fac_id is None and payload['feature']['attributes'].items() == 'layer_1_FacilityID':
+    if fac_id is None and payload['feature']['attributes'].get('layer_1_FacilityID') is not None:
        fac_id = payload['feature']['attributes']['layer_1_FacilityID']
+    else:
+        fac_id = None
     master_questions = {q.formatted_survey_field_name: q.question for q in MasterQuestion.objects.all()}
     assessment_responses = []
     for k, v in payload['feature']['attributes'].items():
