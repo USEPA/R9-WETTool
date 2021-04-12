@@ -168,7 +168,7 @@ class MasterQuestion(models.Model):
             return [{
                 'type': 'begin_group',
                 'name': self.formatted_survey_field_name,
-                'label': f" '<h2><center>{self.question}</h2></center>",
+                'label': self.question,
                 'relevant': f" {self.formatted_survey_category_field_relevant(layer_index)}",
             },
                 {
@@ -264,7 +264,7 @@ class Survey(models.Model):
         # for x in fields:
 
         if self.layer == '0':
-            fields = self.get_formatted_survey_fields()
+            fields = self.get_formatted_survey_fields(self.layer)
         else:
             fields = self.get_formatted_fields()
 
@@ -296,7 +296,7 @@ class Survey(models.Model):
             questions.extend(x.get_formatted_question(self.layer))
         questions_df = pd.DataFrame(questions)
         # all_questions_df = [questions_df, status_df]
-        survey_df_all = [questions_df, field_df_drop_dups, status_df, geopoint_df]
+        survey_df_all = [questions_df, field_df, status_df, geopoint_df]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
@@ -465,52 +465,88 @@ class Survey(models.Model):
         # todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment
 
         for x in feat_service:
-            for y in x['fields']:
-                if y['name'] not in omit_fields:
-                    fields.append({
-                        'type': 'text',
-                        'name': self.formattedFieldName(x['id'], y['name']),
-                        'label': y['alias'],
-                        'readonly': 'yes'
-                    })
-        else:
-            for y in x['fields']:
-                if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                    fields.append({
-                        'type': 'hidden',
-                        'name': self.formattedFieldName(x['id'], y['name']),
-                        'label': y['alias'],
-                        'readonly': 'yes'
-                    })
-                # elif y['name'] not in omit_fields:
-                #     fields.append({
-                #         'type': 'hidden',
-                #         'name': self.formattedFieldName(x['id'], y['name']),
-                #         'label': y['alias'],
-                #         'readonly': 'yes'
-                #     })
-                else:
-                    fields.append({
-                        'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
-                        'name': self.formattedFieldName(x['id'], y['name']),
-                        'label': y['alias'],
-                        'readonly': 'yes'
-                    })
+            if x['name'] == 'Base Inventory':
+                fields.append({'type': 'begin group',
+                   'name': 'sys_info',
+                   'label': '<h2 style="background-color:#3295F7;"><center>${layer_0_SystemName}</h2></center>',
+                   'apperance': 'w8 field-list'})
+                for y in x['fields']:
+                    if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+                        fields.append({
+                            'type': 'hidden',
+                            'name': self.formattedFieldName(x['id'], y['name']),
+                            'label': y['alias'],
+                            'readonly': 'yes'
+                        })
+                    elif y['name'] not in omit_fields:
+                        fields.append({
+                            'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                            'name': self.formattedFieldName(x['id'], y['name']),
+                            'label': y['alias'],
+                            'readonly': 'yes'
+                        })
+                fields.append({'type': 'end group'})
+            elif x['name'] == 'Base Facility Inventory':
+                fields.append({'type': 'begin group',
+                   'name': 'facility_info',
+                   'label': '<h2 style="background-color:#00C52A;"><center>${layer_1_FacilityName}</h2></center>',
+                   'apperance': 'w8 field-list'})
+                for y in x['fields']:
+                    if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+                        fields.append({
+                            'type': 'hidden',
+                            'name': self.formattedFieldName(x['id'], y['name']),
+                            'label': y['alias'],
+                            'readonly': 'yes'
+                        })
+                    elif y['name'] not in omit_fields:
+                        fields.append({
+                            'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                            'name': self.formattedFieldName(x['id'], y['name']),
+                            'label': y['alias'],
+                            'readonly': 'yes'
+                        })
+                fields.append({'type':'end group'})
 
+        #     for y in x['fields']:
+        #         if y['name'] not in omit_fields:
+        #             fields.append({
+        #                 'type': 'text',
+        #                 'name': self.formattedFieldName(x['id'], y['name']),
+        #                 'label': y['alias'],
+        #                 'readonly': 'yes'
+        #             })
+        # else:
+        #     for y in x['fields']:
+        #         if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+        #             fields.append({
+        #                 'type': 'hidden',
+        #                 'name': self.formattedFieldName(x['id'], y['name']),
+        #                 'label': y['alias'],
+        #                 'readonly': 'yes'
+        #             })
+        #         else:
+        #             fields.append({
+        #                 'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+        #                 'name': self.formattedFieldName(x['id'], y['name']),
+        #                 'label': y['alias'],
+        #                 'readonly': 'yes'
+        #             })
+        #         fields.append({'type': 'end group'})
         return fields
 
-    def get_formatted_survey_fields(self):
+    def get_formatted_survey_fields(self, layer_id):
         feat_service = json.loads(self.service_config)['layers']
-        fields = []
+        fields = [{'type': 'begin group',
+                   'name': 'sys_info',
+                   'label': '<h2 style="background-color:#3295F7;"><center>System Information</h2></center>',
+                   'apperance': 'w8 field-list'}]
+
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
                        'last_edited_user', 'last_edited_date', 'OBJECTID'}
 
         for x in feat_service:
-            if x['id'] == 0:
-                # fields.append({
-                #     'type': 'begin_group',
-                #     'name': 'test',
-                #     'label': '<h2><center>test</h2></center>'})
+            if x['id'] == int(layer_id):
                 for y in x['fields']:
                     if y['name'] not in omit_fields:
                         fields.append(
@@ -519,8 +555,8 @@ class Survey(models.Model):
                              'label': y['alias'],
                              'readonly': 'yes'
                              },
-
                         )
+            fields.append({'type':'end group'})
         return fields
 
     class Meta:
