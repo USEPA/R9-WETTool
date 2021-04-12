@@ -482,13 +482,13 @@ class Survey(models.Model):
                         'label': y['alias'],
                         'readonly': 'yes'
                     })
-                elif y['name'] not in omit_fields:
-                    fields.append({
-                        'type': 'hidden',
-                        'name': self.formattedFieldName(x['id'], y['name']),
-                        'label': y['alias'],
-                        'readonly': 'yes'
-                    })
+                # elif y['name'] not in omit_fields:
+                #     fields.append({
+                #         'type': 'hidden',
+                #         'name': self.formattedFieldName(x['id'], y['name']),
+                #         'label': y['alias'],
+                #         'readonly': 'yes'
+                #     })
                 else:
                     fields.append({
                         'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
@@ -536,9 +536,9 @@ class QuestionSet(models.Model):
     surveys = models.ManyToManyField('Survey', related_name='question_set')
     questions = models.ManyToManyField('MasterQuestion', related_name='question_set', through='QuestionList')
     sort_order = models.IntegerField(null=True, blank=True)
-    media = models.ForeignKey('Media', on_delete=models.PROTECT, null=True, blank=True)
-    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
+    # media = models.ForeignKey('Media', on_delete=models.PROTECT, null=True, blank=True)
+    # category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
+    # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
 
     def __str__(self):
         return self.name
