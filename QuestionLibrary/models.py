@@ -104,8 +104,8 @@ class MasterQuestion(models.Model):
     # todo: why is media here and in category
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
     category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
-    response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT, verbose_name='Survey123 Field Type')
+    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True, help_text='Leaving facility type empty will apply the question to ALL facilities.')
+    response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT, verbose_name='Survey123 Field Type',)
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True,
                                verbose_name='Response Type')
     # todo: triggers creation of second field for survey generation if not none
@@ -271,12 +271,21 @@ class Survey(models.Model):
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
 
-        layer = [{
-            'form_title': self.name,
-            'form_id': '',
-            'instance_name': 'concat("System Name: "+${layer_0_SystemName}, " ", "System Status: " + ${layer_0_ActivityStatus})',
+        if self.layer == '0':
+            layer = [{
+                'form_title': self.name,
+                'form_id': '',
+                'instance_name': 'concat("System Name: "+${layer_0_SystemName}, " ", "System Status: " + ${layer_0_ActivityStatus})',
+                'style': 'theme-grid'
+            }]
+        else:
+            layer = [{
+                'form_title': self.name,
+                'form_id': '',
+                'instance_name': 'concat("Facility Name: "+${layer_1_FacilityName}, " ", "Facility ID: " + ${layer_1_FacilityID}, " ", "Facility Type: " + ${layer_1_Fac_Type})',
+                'style': 'theme-grid'
+            }]
 
-        }]
         settings_df = pd.DataFrame(layer)
         # add survey status and geopoint fields to the survey. Not sure if this is the best way to do this. works for now.
         survey_status = [{
@@ -468,7 +477,7 @@ class Survey(models.Model):
             if x['name'] == 'Base Inventory':
                 fields.append({'type': 'begin group',
                    'name': 'sys_info',
-                   'label': '<h2 style="background-color:#3295F7;"><center>${layer_0_SystemName}</h2></center>',
+                   'label': '<h2 style="background-color:#3295F7;"><center>"System Name: " + ${layer_0_SystemName}, " ", "System ID " + ${layer_0_pws_fac_id}</h2></center>',
                    'apperance': 'w8 field-list'})
                 for y in x['fields']:
                     if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
@@ -489,7 +498,7 @@ class Survey(models.Model):
             elif x['name'] == 'Base Facility Inventory':
                 fields.append({'type': 'begin group',
                    'name': 'facility_info',
-                   'label': '<h2 style="background-color:#00C52A;"><center>${layer_1_FacilityName}</h2></center>',
+                   'label': '<h2 style="background-color:#00C52A;"><center>Facility Name: ${layer_1_FacilityName} Facility ID: ${layer_1_FacilityID}</h2></center>',
                    'apperance': 'w8 field-list'})
                 for y in x['fields']:
                     if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
@@ -539,7 +548,7 @@ class Survey(models.Model):
         feat_service = json.loads(self.service_config)['layers']
         fields = [{'type': 'begin group',
                    'name': 'sys_info',
-                   'label': '<h2 style="background-color:#3295F7;"><center>System Information</h2></center>',
+                   'label': '<h2 style="background-color:#3295F7;"><center>System Name: ${layer_0_SystemName} System ID: ${layer_0_pws_fac_id}</h2></center>',
                    'apperance': 'w8 field-list'}]
 
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
