@@ -556,7 +556,7 @@ class Survey(models.Model):
                              'readonly': 'yes'
                              },
                         )
-            fields.append({'type':'end group'})
+                fields.append({'type':'end group'})
         return fields
 
     class Meta:
