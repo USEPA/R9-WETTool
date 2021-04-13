@@ -296,7 +296,7 @@ class Survey(models.Model):
             questions.extend(x.get_formatted_question(self.layer))
         questions_df = pd.DataFrame(questions)
         # all_questions_df = [questions_df, status_df]
-        survey_df_all = [questions_df, field_df, status_df, geopoint_df]
+        survey_df_all = [field_df, questions_df, status_df, geopoint_df]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
