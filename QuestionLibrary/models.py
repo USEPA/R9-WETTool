@@ -13,6 +13,8 @@ from itertools import islice
 from django.core.exceptions import ValidationError
 import csv
 from django.utils.html import format_html
+import uuid
+
 
 
 class LookupAbstract(models.Model):
@@ -103,8 +105,8 @@ class MasterQuestion(models.Model):
 
     # todo: why is media here and in category
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
-    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True, help_text='Leaving facility type empty will apply the question to ALL facilities.')
+    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True, help_text='Leaving category type empty will apply the question to ALL category types.')
+    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True, help_text='Leaving facility type empty will apply the question to ALL facility types.')
     response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT, verbose_name='Survey123 Field Type',)
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True,
                                verbose_name='Response Type')
@@ -136,7 +138,9 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_field_name(self):
-        return re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
+        name = re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
+        unique_name = name[:120] + uuid.uuid4().hex[0:8]
+        return unique_name
 
     # def formatted_survey_relevant_questions(self, layer_id):
     #     for r in RelatedQuestionList.objects.filter(related_id__pk=self.id):
