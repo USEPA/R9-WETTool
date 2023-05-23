@@ -20,7 +20,7 @@
                     }
                 });
                 var tempGraphicsLayer = new GraphicsLayer();
-                var references = new VectorTileLayer("https://www.arcgis.com/sharing/rest/content/items/af6063d6906c4eb589dfe03819610660/resources/styles/root.json");
+                var references = new VectorTileLayer("https://www.arcgis.com/sharing/rest/content/items/30d6b8271e1849cd9c3042060001f425/resources/styles/root.json");
 
                 var editGraphic;
                 var allFeatures = [];
