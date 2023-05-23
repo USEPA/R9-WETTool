@@ -184,3 +184,5 @@ ADMIN_REORDER = (
         {'model': 'QuestionLibrary.LookupGroup', 'label': 'Response Types'},
      )},
 )
+
+USE_X_FORWARDED_HOST = getattr(local_settings, 'USE_X_FORWARDED_HOST', False)

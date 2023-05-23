@@ -20,7 +20,7 @@
             let SITE_PROTOCOL = 'http://'
         {% endif %}
 
-        let host = SITE_PROTOCOL + "{{ request.META.HTTP_HOST }}";
+        let host = SITE_PROTOCOL + "{{ request.get_host }}";
     </script>
     <script src="{% static 'point_selection.js' %}" type="text/javascript"></script>
 {% endblock %}
