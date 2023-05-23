@@ -153,7 +153,7 @@ def webhook(request):
                     f['attributes'][k.replace(layer_prefix, "")] = v
 
             # if layer is the base layer holding geometry grab it and put it there
-            if layer['id'] == survey.layer:
+            if layer['id'] == int(survey.layer):
                 f['geometry'] = payload['feature'].get('geometry', None)
 
             data = {'adds' if payload['eventType'] == 'addData' else
