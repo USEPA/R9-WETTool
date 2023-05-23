@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+
+from django.utils.log import DEFAULT_LOGGING
+
 from . import local_settings
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -184,3 +187,17 @@ ADMIN_REORDER = (
         {'model': 'QuestionLibrary.LookupGroup', 'label': 'Response Types'},
      )},
 )
+
+LOGGING = DEFAULT_LOGGING
+LOGGING['handlers']['slack'] = {
+    'level': 'ERROR',
+    'filters': ['require_debug_false'],
+    'class': 'slack_logging.SlackExceptionHandler',
+    'bot_token': getattr(local_settings, 'SLACK_BOT_TOKEN', ''),
+    'channel_id': getattr(local_settings, 'SLACK_CHANNEL', '')
+}
+LOGGING['handlers']['file'] = {'level': 'ERROR',
+                               'filters': ['require_debug_false'],
+                               'class': 'logging.FileHandler',
+                               'filename': os.path.join(BASE_DIR, 'error.log')}
+LOGGING['loggers']['django'] = {'handlers': ['console', 'slack', 'file'], 'level': 'INFO', }

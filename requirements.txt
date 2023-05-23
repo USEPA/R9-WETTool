@@ -8,3 +8,4 @@ git+https://github.com/Innovate-Inc/django-agol-oauth2.git@master#egg=django-ago
 django-debug-toolbar
 django-modeladmin-reorder
 django-fieldsets-with-inlines
+git+https://github.com/Innovate-Inc/django-slack-logging.git#egg=django-slack-logging
