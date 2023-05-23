@@ -13,6 +13,8 @@ from itertools import islice
 from django.core.exceptions import ValidationError
 import csv
 from django.utils.html import format_html
+import uuid
+
 
 
 class LookupAbstract(models.Model):
@@ -27,7 +29,6 @@ class LookupAbstract(models.Model):
     def formatted_survey_name(self):
         return re.sub(r'[^a-zA-Z\d\s:]', '', self.label.lower()).replace(" ", "_")
 
-
     class Meta:
         abstract = True
 
@@ -36,11 +37,11 @@ class LookupGroup(LookupAbstract):
     pass
 
     class Meta:
-        verbose_name="Response Type"
+        verbose_name = "Response Type"
+
 
 class Lookup(LookupAbstract):
     group = models.ForeignKey('LookupGroup', on_delete=models.CASCADE, related_name='lookups')
-
 
 
 class Media(LookupAbstract):
@@ -49,15 +50,13 @@ class Media(LookupAbstract):
     #     verbose_name = '1. Media'
 
 
-
-
 # # todo: if this is to be more generic then Water should not be used here... SubType perhaps is better?
 # class FacilitySubType(LookupAbstract):
 #     pass
 
 
 class FacilityType(models.Model):
-    facility_type = models.CharField(max_length=50, help_text='Facility Type',  blank=True, null=True)
+    facility_type = models.CharField(max_length=50, help_text='Facility Type', blank=True, null=True)
     fac_code = models.CharField(max_length=5, help_text='Facility Code', blank=True, null=True, verbose_name='Fac Code')
     category = models.ForeignKey('Category', on_delete=models.PROTECT, blank=True, null=True)
 
@@ -65,17 +64,16 @@ class FacilityType(models.Model):
         return self.facility_type
 
 
-
-
 # todo: more like default config of logic.. rename?
 # todo: allow matching of these to fields in the actual data set
 class Category(LookupAbstract):
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
+
     # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
     # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
     class Meta:
         verbose_name = 'Category'
-        verbose_name_plural='Categories'
+        verbose_name_plural = 'Categories'
 
 
 # todo: more closely link this with survey123.  Maybe allow input of the cross walk so its configurable and dynamic
@@ -84,8 +82,9 @@ class ResponseType(LookupAbstract):
     pass
 
     survey123_field_type = models.CharField(max_length=50)
+
     class Meta:
-        verbose_name="ESRI Response Type"
+        verbose_name = "ESRI Response Type"
 
 
 class Unit(LookupAbstract):
@@ -99,20 +98,23 @@ class FeatureServiceResponse(models.Model):
     def __str__(self):
         return self.fs_response_type
 
+
 class MasterQuestion(models.Model):
     question = models.TextField(max_length=1000)
     # related_question = models.ManyToManyField('self', blank=True)
 
     # todo: why is media here and in category
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
-    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
-    response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT, verbose_name='Survey123 Field Type')
-    lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True, verbose_name='Response Type')
+    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True, help_text='Leaving category type empty will apply the question to ALL category types.')
+    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True, help_text='Leaving facility type empty will apply the question to ALL facility types.')
+    response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT, verbose_name='Survey123 Field Type',)
+    lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True,
+                               verbose_name='Response Type')
     # todo: triggers creation of second field for survey generation if not none
     default_unit = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True,
                                      help_text='To generate a list of default values, select desired response type and click "Save and Continue Editing"')
-    related_questions = models.ManyToManyField('self', related_name='related_question', through='RelatedQuestionList', symmetrical=False)
+    related_questions = models.ManyToManyField('self', related_name='related_question', through='RelatedQuestionList',
+                                               symmetrical=False)
 
     # todo: does question active make sense in here or just in the survey itself?
     # question_active = models.BooleanField(default=True)
@@ -136,7 +138,9 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_field_name(self):
-        return re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
+        name = re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
+        unique_name = name[:120] + uuid.uuid4().hex[0:8]
+        return unique_name
 
     # def formatted_survey_relevant_questions(self, layer_id):
     #     for r in RelatedQuestionList.objects.filter(related_id__pk=self.id):
@@ -147,21 +151,20 @@ class MasterQuestion(models.Model):
     def formatted_survey_category_field_relevant(self, layer_id):
         for r in RelatedQuestionList.objects.filter(related_id__pk=self.id):
             if r is not None:
-                return f"${{layer_{layer_id}_media}}='{self.media.description}'and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.formatted_survey_name}\")"
+                return f"${{layer_{layer_id}_media}}='{self.media.description}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
             if r is not None and self.facility_type is not None and self.media is not None:
-                return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.formatted_survey_name}\")"
+                return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
         if self.facility_type is not None and self.media is not None:
             return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
         else:
             return f"${{layer_{layer_id}_media}}='{self.media.description}'"
 
     def relevant_for_feature(self, feature, layer_id):
-        if self.facility_type is not None and self.media is not None:
+        if self.facility_type is not None and self.media is not None and layer_id != 0:
             return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description and \
                    feature['attributes'][f'layer_{layer_id}_Fac_Type'] == self.facility_type.fac_code
 
         return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description
-
 
     def get_formatted_question(self, layer_index):
         # must always return a list
@@ -196,6 +199,7 @@ class MasterQuestion(models.Model):
             'relevant': f"{self.formatted_survey_category_field_relevant(layer_index)}",
             'required': f"{self.formatted_survey_category_field_relevant(layer_index)}",
         }]
+
     class Meta:
         verbose_name = 'Master Question'
 
@@ -258,19 +262,36 @@ class Survey(models.Model):
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
         assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
         feat_service = json.loads(self.service_config)
-        fields = self.get_formatted_fields()
+        # fields = self.get_formatted_fields()
+
+        # fields =[]
+        # for x in fields:
+
+        if self.layer == '0':
+            fields = self.get_formatted_survey_fields(self.layer)
+        else:
+            fields = self.get_formatted_fields()
 
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
 
-        layer = [{
-            'form_title': self.name,
-            'form_id': '',
-            'instance_name': 'concat("System Name: "+${layer_0_SystemName}, " ", "System Status: " + ${layer_0_ActivityStatus})',
+        if self.layer == '0':
+            layer = [{
+                'form_title': self.name,
+                'form_id': '',
+                'instance_name': 'concat("System Name: "+${layer_0_SystemName}, " ", "System Status: " + ${layer_0_ActivityStatus})',
+                'style': 'theme-grid'
+            }]
+        else:
+            layer = [{
+                'form_title': self.name,
+                'form_id': '',
+                'instance_name': 'concat("Facility Name: "+${layer_1_FacilityName}, " ", "Facility ID: " + ${layer_1_FacilityID}, " ", "Facility Type: " + ${layer_1_Fac_Type})',
+                'style': 'theme-grid'
+            }]
 
-        }]
         settings_df = pd.DataFrame(layer)
-        #add survey status and geopoint fields to the survey. Not sure if this is the best way to do this. works for now.
+        # add survey status and geopoint fields to the survey. Not sure if this is the best way to do this. works for now.
         survey_status = [{
             'type': 'hidden',
             'name': 'survey_status',
@@ -288,14 +309,14 @@ class Survey(models.Model):
             questions.extend(x.get_formatted_question(self.layer))
         questions_df = pd.DataFrame(questions)
         # all_questions_df = [questions_df, status_df]
-        survey_df_all = [questions_df, field_df_drop_dups, status_df, geopoint_df]
+        survey_df_all = [field_df, questions_df, status_df, geopoint_df]
         survey_df = orig_survey_df.append(survey_df_all)
 
         assigned_lookups = Lookup.objects.filter(group__masterquestion__question_set__surveys=self).distinct()
         choices = [
             {
                 'list_name': x.group.formatted_survey_name,
-                'name': x.formatted_survey_name,
+                'name': x.label,
                 'label': x.description,
             } for x in assigned_lookups
         ]
@@ -366,7 +387,6 @@ class Survey(models.Model):
 
                 object_ids = selected
 
-
                 if len(object_ids) == 0:
                     break
                 else:
@@ -381,7 +401,7 @@ class Survey(models.Model):
                      'token': token,
                      'f': 'json'}
 
-                params = '&'.join([f'{k}={v}' for k,v in p.items()])
+                params = '&'.join([f'{k}={v}' for k, v in p.items()])
 
                 q = requests.get(url=self.base_map_service + '/' + str(self.layer) + '/query',
                                  params=params)
@@ -405,7 +425,7 @@ class Survey(models.Model):
                     # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
                 for origin_feature in q.json()['features']:
                     # loop through relationships to get all features in all related layers
-                    feature = {'attributes': {}, 'geometry': origin_feature.get('geometry',None)}
+                    feature = {'attributes': {}, 'geometry': origin_feature.get('geometry', None)}
 
                     for k, v in origin_feature['attributes'].items():
                         feature['attributes'][self.formattedFieldName(x['id'], k)] = v
@@ -422,7 +442,6 @@ class Survey(models.Model):
                             if feature.get('geometry', None) is None:
                                 feature['geometry'] = related_feature.get('geometry', None)
 
-
                             for k, v in related_feature['attributes'].items():
                                 feature['attributes'][self.formattedFieldName(related_layer_id, k)] = v
 
@@ -430,7 +449,8 @@ class Survey(models.Model):
                     for question_set in self.question_set.all():
                         for question in question_set.questions.all():
                             if question.relevant_for_feature(feature, self.layer) and question.default_unit is not None:
-                                feature['attributes'][f'{question.formatted_survey_field_name}_choices'] = question.default_unit.description
+                                feature['attributes'][
+                                    f'{question.formatted_survey_field_name}_choices'] = question.default_unit.description
 
                     features.append(feature)
                     print(feature)
@@ -446,27 +466,23 @@ class Survey(models.Model):
 
         r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-        print (r)
+        print(r)
+
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)['layers']
         fields = []
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
-                       'last_edited_user', 'last_edited_date', 'OBJECTID', 'pws_fac_id'}
+                       'last_edited_user', 'last_edited_date', 'OBJECTID'}
 
         # todo do these need to be hidden or do the need to be left out completely
-        #todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment
+        # todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment
 
         for x in feat_service:
-            if x['id'] != int(self.layer):
-                for y in x['fields']:
-                    if y['name'] not in omit_fields:
-                        fields.append({
-                            'type': 'text',
-                            'name': self.formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
-                            'readonly': 'yes'
-                        })
-            else:
+            if x['name'] == 'Base Inventory':
+                fields.append({'type': 'begin group',
+                   'name': 'sys_info',
+                   'label': '<h2 style="background-color:#3295F7;"><center>"System Name: " + ${layer_0_SystemName}, " ", "System ID " + ${layer_0_pws_fac_id}</h2></center>',
+                   'apperance': 'w8 field-list'})
                 for y in x['fields']:
                     if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
                         fields.append({
@@ -475,21 +491,85 @@ class Survey(models.Model):
                             'label': y['alias'],
                             'readonly': 'yes'
                         })
-                    elif y['name'] in omit_fields:
-                        fields.append({
-                            'type': 'hidden',
-                            'name': self.formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
-                            'readonly': 'yes'
-                        })
-                    else:
+                    elif y['name'] not in omit_fields:
                         fields.append({
                             'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
                             'name': self.formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
                             'readonly': 'yes'
                         })
+                fields.append({'type': 'end group'})
+            elif x['name'] == 'Base Facility Inventory':
+                fields.append({'type': 'begin group',
+                   'name': 'facility_info',
+                   'label': '<h2 style="background-color:#00C52A;"><center>Facility Name: ${layer_1_FacilityName} Facility ID: ${layer_1_FacilityID}</h2></center>',
+                   'apperance': 'w8 field-list'})
+                for y in x['fields']:
+                    if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+                        fields.append({
+                            'type': 'hidden',
+                            'name': self.formattedFieldName(x['id'], y['name']),
+                            'label': y['alias'],
+                            'readonly': 'yes'
+                        })
+                    elif y['name'] not in omit_fields:
+                        fields.append({
+                            'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                            'name': self.formattedFieldName(x['id'], y['name']),
+                            'label': y['alias'],
+                            'readonly': 'yes'
+                        })
+                fields.append({'type':'end group'})
 
+        #     for y in x['fields']:
+        #         if y['name'] not in omit_fields:
+        #             fields.append({
+        #                 'type': 'text',
+        #                 'name': self.formattedFieldName(x['id'], y['name']),
+        #                 'label': y['alias'],
+        #                 'readonly': 'yes'
+        #             })
+        # else:
+        #     for y in x['fields']:
+        #         if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
+        #             fields.append({
+        #                 'type': 'hidden',
+        #                 'name': self.formattedFieldName(x['id'], y['name']),
+        #                 'label': y['alias'],
+        #                 'readonly': 'yes'
+        #             })
+        #         else:
+        #             fields.append({
+        #                 'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+        #                 'name': self.formattedFieldName(x['id'], y['name']),
+        #                 'label': y['alias'],
+        #                 'readonly': 'yes'
+        #             })
+        #         fields.append({'type': 'end group'})
+        return fields
+
+    def get_formatted_survey_fields(self, layer_id):
+        feat_service = json.loads(self.service_config)['layers']
+        fields = [{'type': 'begin group',
+                   'name': 'sys_info',
+                   'label': '<h2 style="background-color:#3295F7;"><center>System Name: ${layer_0_SystemName} System ID: ${layer_0_pws_fac_id}</h2></center>',
+                   'apperance': 'w8 field-list'}]
+
+        omit_fields = {'created_user', 'created_date', 'AlternateTextID',
+                       'last_edited_user', 'last_edited_date', 'OBJECTID'}
+
+        for x in feat_service:
+            if x['id'] == int(layer_id):
+                for y in x['fields']:
+                    if y['name'] not in omit_fields:
+                        fields.append(
+                            {'type': 'text',
+                             'name': self.formattedFieldName(x['id'], y['name']),
+                             'label': y['alias'],
+                             'readonly': 'yes'
+                             },
+                        )
+                fields.append({'type':'end group'})
         return fields
 
     class Meta:
@@ -505,10 +585,9 @@ class QuestionSet(models.Model):
     surveys = models.ManyToManyField('Survey', related_name='question_set')
     questions = models.ManyToManyField('MasterQuestion', related_name='question_set', through='QuestionList')
     sort_order = models.IntegerField(null=True, blank=True)
-    media = models.ForeignKey('Media', on_delete=models.PROTECT, null=True, blank=True)
-    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
-
+    # media = models.ForeignKey('Media', on_delete=models.PROTECT, null=True, blank=True)
+    # category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
+    # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -522,8 +601,11 @@ class QuestionList(models.Model):
     active = models.BooleanField(default=True)
     sort_order = models.IntegerField(null=True, blank=True)
 
+
 class SurveyResponse(models.Model):
     response = models.TextField(null=True, blank=True)
+
+
 #
 # class RelatedQuestion(models.Model):
 #     questions = models.ManyToManyField('MasterQuestion', related_name='related_questions', through='RelatedQuestionList')

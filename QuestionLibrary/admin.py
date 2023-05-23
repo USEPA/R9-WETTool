@@ -242,6 +242,6 @@ class QuestionSetInline(admin.TabularInline):
 @admin.register(QuestionSet)
 class QuestionSetAdmin(admin.ModelAdmin):
     list_display = ['name', 'owner']
-    fields = ['name', 'owner', 'media', 'category', 'facility_type']
+    fields = ['name', 'owner']
     # forms = QuestionSetFilters
     inlines = [QuestionSetInline]

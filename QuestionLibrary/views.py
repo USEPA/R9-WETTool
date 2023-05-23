@@ -16,6 +16,7 @@ from social_django.utils import load_strategy
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
+from django.core.exceptions import ObjectDoesNotExist
 
 @method_decorator(login_required, name='dispatch')
 class EsriProxy(View):
@@ -100,7 +101,7 @@ download_xls_action.short_description = 'Download Survey123 Service Configuratio
 def load_selected_records_action(modeladmin, request, queryset):
     for obj in queryset:
         obj.postAttributes(request.user)
-        messages.success(request, 'Records Successfully Loaded to Survery123')
+        messages.success(request, 'Records Successfully Loaded to Survey123')
 
 
 load_selected_records_action.short_description = 'Load Selected Records to Survey123'
@@ -162,6 +163,11 @@ def webhook(request):
                                  data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
     table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
+    fac_id = None
+    if fac_id is None and payload['feature']['attributes'].get('layer_1_FacilityID') is not None:
+       fac_id = payload['feature']['attributes']['layer_1_FacilityID']
+    else:
+        fac_id = None
     master_questions = {q.formatted_survey_field_name: q.question for q in MasterQuestion.objects.all()}
     assessment_responses = []
     for k, v in payload['feature']['attributes'].items():
@@ -173,15 +179,25 @@ def webhook(request):
                         'question': master_questions[original_attribute],
                         'response': v,
                         'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
-                        'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
+                        'facility_id': fac_id,
+                        'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
+                        # 'display_name':
                     }})
             elif k.endswith('_choices'):
                 pass
+
             elif k in master_questions:
+                try:
+                    v_decoded = Lookup.objects.get(label=v).description
+                except ObjectDoesNotExist:
+                    v_decoded = None
                 assessment_responses.append({'attributes': {
                     'question': master_questions[k],
                     'response': v,
-                    'facility_id': payload['feature']['attributes']['layer_1_FacilityID']
+                    'facility_id':fac_id,
+                    'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
+                    'display_name': v_decoded
+
 
                 }})
 
