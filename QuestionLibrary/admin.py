@@ -159,6 +159,7 @@ class MasterQuestionAdmin(admin.ModelAdmin):
     search_fields = ['question']
     list_display = ['question', 'media', 'category', 'facility_type']
     ordering = ['question']
+    fields = ['question', 'media', 'category', 'facility_type', 'response_type', 'lookup', 'default_unit']
 
 
 class SurveyAdminForm(ModelForm):

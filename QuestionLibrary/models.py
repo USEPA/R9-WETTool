@@ -116,6 +116,8 @@ class MasterQuestion(models.Model):
     related_questions = models.ManyToManyField('self', related_name='related_question', through='RelatedQuestionList',
                                                symmetrical=False)
 
+    unique_id = models.UUIDField(default=uuid.uuid4())
+
     # todo: does question active make sense in here or just in the survey itself?
     # question_active = models.BooleanField(default=True)
 
@@ -139,7 +141,7 @@ class MasterQuestion(models.Model):
     @property
     def formatted_survey_field_name(self):
         name = re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
-        unique_name = name[:120] + uuid.uuid4().hex[0:8]
+        unique_name = name[:120] + self.unique_id.hex[0:8]
         return unique_name
 
     # def formatted_survey_relevant_questions(self, layer_id):
