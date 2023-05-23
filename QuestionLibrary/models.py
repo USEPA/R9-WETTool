@@ -141,7 +141,7 @@ class MasterQuestion(models.Model):
     @property
     def formatted_survey_field_name(self):
         name = re.sub(r'[^a-zA-Z\d\s:]', '', self.question.lower()).replace(" ", "_")
-        unique_name = name[:120] + self.unique_id.hex[0:8]
+        unique_name = name[:110] + self.unique_id.hex[0:8]
         return unique_name
 
     # def formatted_survey_relevant_questions(self, layer_id):
@@ -156,13 +156,13 @@ class MasterQuestion(models.Model):
                 return f"${{layer_{layer_id}_media}}='{self.media.description}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
             if r is not None and self.facility_type is not None and self.media is not None:
                 return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
-        if self.facility_type is not None and self.media is not None:
+        if self.facility_type is not None and self.media is not None and int(layer_id) != 0:
             return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
         else:
             return f"${{layer_{layer_id}_media}}='{self.media.description}'"
 
     def relevant_for_feature(self, feature, layer_id):
-        if self.facility_type is not None and self.media is not None and layer_id != 0:
+        if self.facility_type is not None and self.media is not None and int(layer_id) != 0:
             return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description and \
                    feature['attributes'][f'layer_{layer_id}_Fac_Type'] == self.facility_type.fac_code
 
@@ -183,7 +183,7 @@ class MasterQuestion(models.Model):
                     'label': 'Measure'
                 },
                 {
-                    'type': f'select_one {self.lookup.label.lower()}',
+                    'type': f'select_one {self.lookup.formatted_survey_name.lower()}',
                     'name': f'{self.formatted_survey_field_name}_choices',
                     'label': self.lookup.description,
                     'default': getattr(self.default_unit, 'label', None)
