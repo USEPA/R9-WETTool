@@ -134,7 +134,7 @@ def webhook(request):
         for k, v in payload['feature']['attributes'].items():
             if k == 'survey_status':
                 survey_status_switch.append({'attributes': {
-                    'objectid': payload['feature']['result']['objectid'],
+                    'objectid': payload['feature']['result']['objectId'],
                     'survey_status': 'submitted'}})
         data_status = {'updates': json.dumps(survey_status_switch)}
         requests.post(f"{survey.survey123_service}/0/applyEdits", params={'token': token, 'f': 'json'},
