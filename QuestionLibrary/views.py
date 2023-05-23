@@ -190,8 +190,9 @@ def webhook(request):
                     pass
 
                 elif k in master_questions:
+                    master_question = master_questions[k]
                     try:
-                        v_decoded = Lookup.objects.get(label=v).description
+                        v_decoded = master_question.lookup.lookups.get(label=v).description
                     except ObjectDoesNotExist:
                         v_decoded = None
                     assessment_responses.append({'attributes': {
