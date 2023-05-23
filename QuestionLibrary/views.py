@@ -171,7 +171,7 @@ def webhook(request):
            fac_id = payload['feature']['attributes']['layer_1_FacilityID']
         else:
             fac_id = None
-        master_questions = {q.formatted_survey_field_name: q.question for q in MasterQuestion.objects.all()}
+        master_questions = {q.formatted_survey_field_name: q for q in MasterQuestion.objects.all()}
         assessment_responses = []
         for k, v in payload['feature']['attributes'].items():
             if not k.startswith('layer'):
@@ -179,7 +179,7 @@ def webhook(request):
                     original_attribute = k.replace('_measure', '')
                     if original_attribute in master_questions:
                         assessment_responses.append({'attributes': {
-                            'question': master_questions[original_attribute],
+                            'question': master_questions[original_attribute].question,
                             'response': v,
                             'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
                             'facility_id': fac_id,
@@ -196,7 +196,7 @@ def webhook(request):
                     except ObjectDoesNotExist:
                         v_decoded = None
                     assessment_responses.append({'attributes': {
-                        'question': master_questions[k],
+                        'question': master_questions[k].question,
                         'response': v,
                         'facility_id':fac_id,
                         'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
