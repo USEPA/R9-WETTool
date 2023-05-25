@@ -6,6 +6,8 @@ from django.utils.decorators import method_decorator
 from social_django.utils import load_strategy
 import requests
 import urllib
+
+from QuestionLibrary.func import load_responses
 from QuestionLibrary.models import *
 from wsgiref.util import FileWrapper
 import csv
@@ -140,74 +142,75 @@ def webhook(request):
         requests.post(f"{survey.survey123_service}/0/applyEdits", params={'token': token, 'f': 'json'},
                               data=data_status, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
+        load_responses(survey, [payload['feature']], token, payload['eventType'])
         # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
-        base_service_config = json.loads(survey.service_config)['layers']
-        # todo: deal with new features and how that affects creating records in related tables
-        for layer in base_service_config:
-            layer_prefix = f"layer_{layer['id']}_"
-
-            # translate fields for this service into their original name and post back
-            f = {'attributes': {}}
-            for k, v in payload['feature']['attributes'].items():
-                if k.startswith(layer_prefix):
-                    f['attributes'][k.replace(layer_prefix, "")] = v
-
-            # if layer is the base layer holding geometry grab it and put it there
-            if layer['id'] == int(survey.layer):
-                f['geometry'] = payload['feature'].get('geometry', None)
-
-            data = {'adds' if payload['eventType'] == 'addData' else
-                    ('updates' if payload['eventType'] == 'editData' else None): [json.dumps(f)]}
-
-            # todo: for updates look for existing record and copy to history table
-
-            response = requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
-                                     params={'token': token, 'f': 'json'},
-                                     data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-
-        table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
-        fac_id = None
-        if fac_id is None and payload['feature']['attributes'].get('layer_1_FacilityID') is not None:
-           fac_id = payload['feature']['attributes']['layer_1_FacilityID']
-        else:
-            fac_id = None
-        master_questions = {q.formatted_survey_field_name: q for q in MasterQuestion.objects.all()}
-        assessment_responses = []
-        for k, v in payload['feature']['attributes'].items():
-            if not k.startswith('layer'):
-                if k.endswith('_measure'):
-                    original_attribute = k.replace('_measure', '')
-                    if original_attribute in master_questions:
-                        assessment_responses.append({'attributes': {
-                            'question': master_questions[original_attribute].question,
-                            'response': v,
-                            'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
-                            'facility_id': fac_id,
-                            'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
-                            # 'display_name':
-                        }})
-                elif k.endswith('_choices'):
-                    pass
-
-                elif k in master_questions:
-                    master_question = master_questions[k]
-                    try:
-                        v_decoded = master_question.lookup.lookups.get(label=v).description
-                    except ObjectDoesNotExist:
-                        v_decoded = None
-                    assessment_responses.append({'attributes': {
-                        'question': master_questions[k].question,
-                        'response': v,
-                        'facility_id':fac_id,
-                        'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
-                        'display_name': v_decoded
-
-
-                    }})
-
-        data = {'adds': json.dumps(assessment_responses)}
-        requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
-                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+        # base_service_config = json.loads(survey.service_config)['layers']
+        # # todo: deal with new features and how that affects creating records in related tables
+        # for layer in base_service_config:
+        #     layer_prefix = f"layer_{layer['id']}_"
+        #
+        #     # translate fields for this service into their original name and post back
+        #     f = {'attributes': {}}
+        #     for k, v in payload['feature']['attributes'].items():
+        #         if k.startswith(layer_prefix):
+        #             f['attributes'][k.replace(layer_prefix, "")] = v
+        #
+        #     # if layer is the base layer holding geometry grab it and put it there
+        #     if layer['id'] == int(survey.layer):
+        #         f['geometry'] = payload['feature'].get('geometry', None)
+        #
+        #     data = {'adds' if payload['eventType'] == 'addData' else
+        #             ('updates' if payload['eventType'] == 'editData' else None): [json.dumps(f)]}
+        #
+        #     # todo: for updates look for existing record and copy to history table
+        #
+        #     response = requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
+        #                              params={'token': token, 'f': 'json'},
+        #                              data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+        #
+        # table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
+        # fac_id = None
+        # if fac_id is None and payload['feature']['attributes'].get('layer_1_FacilityID') is not None:
+        #    fac_id = payload['feature']['attributes']['layer_1_FacilityID']
+        # else:
+        #     fac_id = None
+        # master_questions = {q.formatted_survey_field_name: q for q in MasterQuestion.objects.all()}
+        # assessment_responses = []
+        # for k, v in payload['feature']['attributes'].items():
+        #     if not k.startswith('layer'):
+        #         if k.endswith('_measure'):
+        #             original_attribute = k.replace('_measure', '')
+        #             if original_attribute in master_questions:
+        #                 assessment_responses.append({'attributes': {
+        #                     'question': master_questions[original_attribute].question,
+        #                     'response': v,
+        #                     'units': payload['feature']['attributes'][f"{original_attribute}_choices"],
+        #                     'facility_id': fac_id,
+        #                     'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
+        #                     # 'display_name':
+        #                 }})
+        #         elif k.endswith('_choices'):
+        #             pass
+        #
+        #         elif k in master_questions:
+        #             master_question = master_questions[k]
+        #             try:
+        #                 v_decoded = master_question.lookup.lookups.get(label=v).description
+        #             except ObjectDoesNotExist:
+        #                 v_decoded = None
+        #             assessment_responses.append({'attributes': {
+        #                 'question': master_questions[k].question,
+        #                 'response': v,
+        #                 'facility_id':fac_id,
+        #                 'system_id': payload['feature']['attributes']['layer_0_pws_fac_id'],
+        #                 'display_name': v_decoded
+        #
+        #
+        #             }})
+        #
+        # data = {'adds': json.dumps(assessment_responses)}
+        # requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
+        #               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
         return HttpResponse("Ok")
     except Exception as e:
