@@ -8,6 +8,21 @@ from django.contrib.admin.widgets import AutocompleteSelect
 
 from .views import download_xls_action, load_selected_records_action
 from fieldsets_with_inlines import FieldsetsInlineMixin
+from .func import load_responses
+
+def load_selected_responses(modeladmin, request, queryset):
+    for survey in queryset:
+        # todo: figure out add vs edit event type here
+        social = request.user.social_auth.get(provider='agol')
+        token = social.get_access_token(load_strategy())
+        response = requests.get(f"{survey.survey123_service}/0/query",
+                                params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token, "f": "json"})
+        features = response.json().get('features', [])
+        load_responses(survey, features, token, 'editData')
+
+
+load_selected_responses.short_description = '(Re)Load submitted responses from survey'
+
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
@@ -199,7 +214,7 @@ class SurveyAdmin(admin.ModelAdmin):
     list_display = ['name', 'base_service_ready', 'survey_service_ready']
 
     fields = ['name', 'base_map_service', 'layer', 'assessment_layer', 'survey123_service', 'selected_features']
-    actions = [download_xls_action, load_selected_records_action]
+    actions = [download_xls_action, load_selected_records_action, load_selected_responses]
 
     def save_model(self, request, obj, form, change):
         # obj.user = request.user
