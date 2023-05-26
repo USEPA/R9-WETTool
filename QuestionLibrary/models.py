@@ -16,7 +16,6 @@ from django.utils.html import format_html
 import uuid
 
 
-
 class LookupAbstract(models.Model):
     label = models.CharField(max_length=50, help_text='like this')
     description = models.CharField(max_length=500, null=True, blank=True)
@@ -395,18 +394,17 @@ class Survey(models.Model):
                     result_offset += 10
                     # get features in origin layer
 
-                p = {"where": "1=1",
-                     "objectIds": ','.join(object_ids),
-                     # "resultOffset": result_offset,
-                     # "resultRecordCount": 10,
-                     "outFields": "*",
-                     'token': token,
-                     'f': 'json'}
+                data = {"where": "1=1",
+                        "objectIds": ','.join(object_ids),
+                        # "resultOffset": result_offset,
+                        # "resultRecordCount": 10,
+                        "outFields": "*",
+                        }
 
-                params = '&'.join([f'{k}={v}' for k, v in p.items()])
-
-                q = requests.get(url=self.base_map_service + '/' + str(self.layer) + '/query',
-                                 params=params)
+                params = {'token': token,
+                          'f': 'json'}
+                q = requests.post(url=self.base_map_service + '/' + str(self.layer) + '/query',
+                                  params=params, data=data)
                 layer_name = origin_layer['name']
 
                 # object_ids = [str(z['attributes']['OBJECTID']) for z in q.json()['features']]
@@ -414,15 +412,15 @@ class Survey(models.Model):
                 # get the related layer
                 # todo: figure out where to pull geometry from... like froms base_facility_inventory... not the origin table
                 for related_layer in [y for y in origin_layer['relationships']]:  # esriRelRoleDestination
-                    p = {"objectIds": ','.join(object_ids),
-                         "relationshipId": related_layer['id'],
-                         "outFields": "*",
-                         'token': token,
-                         'f': 'json'}
-                    params = '&'.join([f'{k}={v}' for k, v in p.items()])
-                    related_responses[related_layer['id']] = requests.get(
+                    data = {"objectIds": ','.join(object_ids),
+                            "relationshipId": related_layer['id'],
+                            "outFields": "*",
+                            }
+                    params = {'token': token,
+                              'f': 'json'}
+                    related_responses[related_layer['id']] = requests.post(
                         url=self.base_map_service + '/' + str(self.layer) + '/queryRelatedRecords',
-                        params=params)
+                        params=params, data=data)
 
                     # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
                 for origin_feature in q.json()['features']:
@@ -455,7 +453,7 @@ class Survey(models.Model):
                                     f'{question.formatted_survey_field_name}_choices'] = question.default_unit.description
 
                     features.append(feature)
-                    print(feature)
+                    # print(feature)
 
                 # print(features)
         return features
@@ -480,11 +478,11 @@ class Survey(models.Model):
         # todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment
 
         for x in feat_service:
-            if x['name'] == 'Base Inventory':
+            if x['name'] == 'Base_Inventory':
                 fields.append({'type': 'begin group',
-                   'name': 'sys_info',
-                   'label': '<h2 style="background-color:#3295F7;"><center>"System Name: " + ${layer_0_SystemName}, " ", "System ID " + ${layer_0_pws_fac_id}</h2></center>',
-                   'apperance': 'w8 field-list'})
+                               'name': 'sys_info',
+                               'label': '<h2 style="background-color:#3295F7;"><center>"System Name: " + ${layer_0_SystemName}, " ", "System ID " + ${layer_0_pws_fac_id}</h2></center>',
+                               'apperance': 'w8 field-list'})
                 for y in x['fields']:
                     if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
                         fields.append({
@@ -501,11 +499,11 @@ class Survey(models.Model):
                             'readonly': 'yes'
                         })
                 fields.append({'type': 'end group'})
-            elif x['name'] == 'Base Facility Inventory':
+            elif x['name'] == 'Base_Facility_Inventory':
                 fields.append({'type': 'begin group',
-                   'name': 'facility_info',
-                   'label': '<h2 style="background-color:#00C52A;"><center>Facility Name: ${layer_1_FacilityName} Facility ID: ${layer_1_FacilityID}</h2></center>',
-                   'apperance': 'w8 field-list'})
+                               'name': 'facility_info',
+                               'label': '<h2 style="background-color:#00C52A;"><center>Facility Name: ${layer_1_FacilityName} Facility ID: ${layer_1_FacilityID}</h2></center>',
+                               'apperance': 'w8 field-list'})
                 for y in x['fields']:
                     if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
                         fields.append({
