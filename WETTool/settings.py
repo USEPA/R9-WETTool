@@ -185,6 +185,7 @@ ADMIN_REORDER = (
         {'model': 'QuestionLibrary.QuestionSet', 'label': 'Question Sets'},
         {'model': 'QuestionLibrary.Survey', 'label': 'Assessments'},
         {'model': 'QuestionLibrary.LookupGroup', 'label': 'Response Types'},
+        {'model': 'QuestionLibrary.FeatureServiceResponse', 'label': 'Feature Service/Survey123 Field Mappings'},
      )},
 )
 
