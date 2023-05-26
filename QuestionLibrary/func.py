@@ -3,7 +3,18 @@ import json
 from django.core.exceptions import ObjectDoesNotExist
 from .models import MasterQuestion
 import requests
+from pandas import DataFrame
 
+# def append_response(assessment_responses, new_response):
+#     if new_response['attributes']['facility_id'] is not None:
+#         if not any(new_response['attributes']['question'] == x['attributes']['question'] and \
+#                    new_response['attributes']['system_id'] == x['attributes']['system_id'] and \
+#                    new_response['attributes']['facility_id'] == x['attributes']['facility_id'] for x in assessment_responses):
+#             assessment_responses.append(new_response)
+#     else:
+#         if not any(new_response['attributes']['question'] == x['attributes']['question'] and \
+#                    new_response['attributes']['system_id'] == x['attributes']['system_id'] for x in assessment_responses):
+#             assessment_responses.append(new_response)
 
 def load_responses(survey, response_features, token, eventType):
 
@@ -61,7 +72,7 @@ def load_responses(survey, response_features, token, eventType):
                 if k.endswith('_measure'):
                     original_attribute = k.replace('_measure', '')
                     if original_attribute in master_questions:
-                        assessment_responses.append({'attributes': {
+                        assessment_responses.append({
                             'question': master_questions[original_attribute].question,
                             'response': v,
                             'units': response_feature['attributes'][f"{original_attribute}_choices"],
@@ -69,7 +80,7 @@ def load_responses(survey, response_features, token, eventType):
                             'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
                             'EditDate': response_feature['attributes']['EditDate']
                             # 'display_name':
-                        }})
+                        })
                 elif k.endswith('_choices'):
                     pass
 
@@ -79,15 +90,18 @@ def load_responses(survey, response_features, token, eventType):
                         v_decoded = master_question.lookup.lookups.get(label=v).description
                     except ObjectDoesNotExist:
                         v_decoded = None
-                    assessment_responses.append({'attributes': {
+                    assessment_responses.append({
                         'question': master_questions[k].question,
                         'response': v,
                         'facility_id': fac_id,
                         'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
                         'display_name': v_decoded,
                         'EditDate': response_feature['attributes']['EditDate']
-                    }})
+                    })
 
+    assessment_responses_df = DataFrame(assessment_responses)
+    assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id']).EditDate.idxmax(),:]
+    assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
     # loop through assessment questions and check if they need to be added or updated in base service
     updates, adds = [], []
     for response in assessment_responses:
@@ -98,16 +112,16 @@ def load_responses(survey, response_features, token, eventType):
                          params={'where': where, 'token': token, 'f': 'json', 'outFields': '*'})
         features = r.json()['features']
         if len(features) == 1:
-            for k, v in response.items():
+            for k, v in response['attributes'].items():
                 features[0]['attributes'][k] = v
             updates.append(features[0])
         else:
             adds.append(response)
 
     data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-    requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
+    r = requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
                   data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-
+    print(r)
 
 
 
