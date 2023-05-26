@@ -121,7 +121,6 @@ def load_responses(survey, response_features, token, eventType):
     data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
     r = requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
                   data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-    print(r)
 
 
 
