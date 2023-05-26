@@ -10,11 +10,15 @@ from .views import download_xls_action, load_selected_records_action
 from fieldsets_with_inlines import FieldsetsInlineMixin
 from .func import load_responses
 
+
 def load_selected_responses(modeladmin, request, queryset):
     for survey in queryset:
         # todo: figure out add vs edit event type here
         social = request.user.social_auth.get(provider='agol')
         token = social.get_access_token(load_strategy())
+
+
+
         response = requests.get(f"{survey.survey123_service}/0/query",
                                 params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token, "f": "json"})
         features = response.json().get('features', [])

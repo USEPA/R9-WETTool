@@ -464,9 +464,12 @@ class Survey(models.Model):
         feat = self.getBaseAttributes(user)
         data = urlencode({"adds": json.dumps(feat)})
 
-        r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
+        delete_r = requests.post(url=self.survey123_service + '/0/deleteFeatures', params={'token': token, 'f': 'json'},
+                          data={"where": "survey_status is null"}, headers={'Content-type': 'application/x-www-form-urlencoded'})
+
+        add_r = requests.post(url=self.survey123_service + '/0/applyEdits', params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-        print(r)
+
 
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)['layers']

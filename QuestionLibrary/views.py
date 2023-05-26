@@ -118,7 +118,7 @@ def webhook(request):
         # if not expected event time then escape
         if payload['eventType'] not in ['addData', 'editData']:
             return HttpResponse("Ok")
-        origin_features =[]
+
         survey = Survey.objects.get(survey123_service=payload['surveyInfo']['serviceUrl'])
 
         # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
