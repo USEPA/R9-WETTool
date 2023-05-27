@@ -54,9 +54,9 @@ def load_responses(survey, response_features, token, eventType):
             # ignore eventType and always check?? based on what? if someone can enter then what happens...
             # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
 
-            requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
-                          params={'token': token, 'f': 'json'},
-                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+            # requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
+            #               params={'token': token, 'f': 'json'},
+            #               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
     table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
     assessment_responses = []
@@ -100,7 +100,7 @@ def load_responses(survey, response_features, token, eventType):
                     })
 
     assessment_responses_df = DataFrame(assessment_responses)
-    assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id']).EditDate.idxmax(),:]
+    assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id'], dropna=False).EditDate.idxmax(),:]
     assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
     # loop through assessment questions and check if they need to be added or updated in base service
     updates, adds = [], []
@@ -121,6 +121,6 @@ def load_responses(survey, response_features, token, eventType):
     data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
     r = requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
                   data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-
+    print(r)
 
 
