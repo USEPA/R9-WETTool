@@ -38,8 +38,9 @@ def load_responses(survey, response_features, token, eventType):
         layer_prefix = f"layer_{layer['id']}_"  # get prefix for this layers attributes
 
         # translate fields for this service into their original name and post back
-        f = {'attributes': {}}
+        features = []
         for response_feature in response_features:
+            f = {'attributes': {}}
             for k, v in response_feature['attributes'].items():
                 if k.startswith(layer_prefix):
                     f['attributes'][k.replace(layer_prefix, "")] = v
@@ -47,18 +48,18 @@ def load_responses(survey, response_features, token, eventType):
             # if layer is the base layer holding geometry grab it and put it back into base service
             if layer['id'] == int(survey.layer):
                 f['geometry'] = response_feature.get('geometry', None)
-
-            data = {'adds' if eventType == 'addData' else
-                    ('updates' if eventType == 'editData' else None): [json.dumps(f)]}
+            features.append(f)
+        data = {'adds' if eventType == 'addData' else
+                ('updates' if eventType == 'editData' else None): json.dumps(features)}
 
 
             # todo: for updates look for existing record and copy to history table
             # ignore eventType and always check?? based on what? if someone can enter then what happens...
             # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
 
-            # requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
-            #               params={'token': token, 'f': 'json'},
-            #               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+        requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
+                      params={'token': token, 'f': 'json'},
+                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
     table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
     assessment_responses = []
@@ -75,7 +76,8 @@ def load_responses(survey, response_features, token, eventType):
                     original_attribute = k.replace('_measure', '')
                     if original_attribute in master_questions:
                         assessment_responses.append({
-                            'question': master_questions[original_attribute].question,
+                            # add measure to prevent collision with original question (likely due to misconfiguration of question)
+                            'question': f"{master_questions[original_attribute].question} measure",
                             'response': v,
                             'units': response_feature['attributes'][f"{original_attribute}_choices"],
                             'facility_id': fac_id,
