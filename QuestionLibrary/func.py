@@ -4,6 +4,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from .models import MasterQuestion
 import requests
 from pandas import DataFrame
+import numpy as np
+
 
 # def append_response(assessment_responses, new_response):
 #     if new_response['attributes']['facility_id'] is not None:
@@ -101,6 +103,7 @@ def load_responses(survey, response_features, token, eventType):
 
     assessment_responses_df = DataFrame(assessment_responses)
     assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id'], dropna=False).EditDate.idxmax(),:]
+    assessment_responses_df = assessment_responses_df.replace({np.nan: None})
     assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
     # loop through assessment questions and check if they need to be added or updated in base service
     updates, adds = [], []
