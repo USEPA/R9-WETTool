@@ -74,16 +74,17 @@ def load_responses(survey, response_features, token, eventType):
             if not k.startswith('layer'):
                 if k.endswith('_measure'):
                     original_attribute = k.replace('_measure', '')
+                    units = response_feature['attributes'][f"{original_attribute}_choices"]
                     if original_attribute in master_questions:
                         assessment_responses.append({
                             # add measure to prevent collision with original question (likely due to misconfiguration of question)
                             'question': f"{master_questions[original_attribute].question} measure",
                             'response': v,
-                            'units': response_feature['attributes'][f"{original_attribute}_choices"],
+                            'units': units,
                             'facility_id': fac_id,
                             'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
-                            'EditDate': response_feature['attributes']['EditDate']
-                            # 'display_name':
+                            'EditDate': response_feature['attributes']['EditDate'],
+                            'display_name': f"{v} {units}"
                         })
                 elif k.endswith('_choices'):
                     pass
