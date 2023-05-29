@@ -484,8 +484,8 @@ class Survey(models.Model):
             if x['name'] == 'Base_Inventory':
                 fields.append({'type': 'begin group',
                                'name': 'sys_info',
-                               'label': '<h2 style="background-color:#3295F7;"><center>"System Name: " + ${layer_0_SystemName}, " ", "System ID " + ${layer_0_pws_fac_id}</h2></center>',
-                               'apperance': 'w8 field-list'})
+                               'label': '<h2 style="background-color:#3295F7;"><center>System Name: ${layer_0_SystemName} System ID ${layer_0_pws_fac_id}</h2></center>',
+                               'appearance': 'w1 field-list'})
                 for y in x['fields']:
                     if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
                         fields.append({
@@ -499,14 +499,14 @@ class Survey(models.Model):
                             'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
                             'name': self.formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
-                            'readonly': 'yes'
+                            'readonly': 'pulldata("@property", "mode") = "edit"'
                         })
                 fields.append({'type': 'end group'})
             elif x['name'] == 'Base_Facility_Inventory':
                 fields.append({'type': 'begin group',
                                'name': 'facility_info',
                                'label': '<h2 style="background-color:#00C52A;"><center>Facility Name: ${layer_1_FacilityName} Facility ID: ${layer_1_FacilityID}</h2></center>',
-                               'apperance': 'w8 field-list'})
+                               'appearance': 'w1 field-list'})
                 for y in x['fields']:
                     if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
                         fields.append({
@@ -520,7 +520,7 @@ class Survey(models.Model):
                             'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
                             'name': self.formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
-                            'readonly': 'yes'
+                            'readonly': 'pulldata("@property", "mode") = "edit"'
                         })
                 fields.append({'type':'end group'})
 
@@ -556,7 +556,7 @@ class Survey(models.Model):
         fields = [{'type': 'begin group',
                    'name': 'sys_info',
                    'label': '<h2 style="background-color:#3295F7;"><center>System Name: ${layer_0_SystemName} System ID: ${layer_0_pws_fac_id}</h2></center>',
-                   'apperance': 'w8 field-list'}]
+                   'appearance': 'w1 field-list'}]
 
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
                        'last_edited_user', 'last_edited_date', 'OBJECTID'}
