@@ -56,10 +56,10 @@ def load_responses(survey, response_features, token, eventType):
             # todo: for updates look for existing record and copy to history table
             # ignore eventType and always check?? based on what? if someone can enter then what happens...
             # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
-
-        requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
-                      params={'token': token, 'f': 'json'},
-                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+        #
+        # requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
+        #               params={'token': token, 'f': 'json'},
+        #               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
     table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
     assessment_responses = []
@@ -83,7 +83,7 @@ def load_responses(survey, response_features, token, eventType):
                             'units': units,
                             'facility_id': fac_id,
                             'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
-                            'EditDate': response_feature['attributes']['EditDate'],
+                            'totalTime': response_feature['attributes']['EditDate'] + response_feature['attributes']['CreationDate'],
                             'display_name': f"{v} {units}"
                         })
                 elif k.endswith('_choices'):
@@ -102,11 +102,11 @@ def load_responses(survey, response_features, token, eventType):
                         'facility_id': fac_id,
                         'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
                         'display_name': v_decoded,
-                        'EditDate': response_feature['attributes']['EditDate']
+                        'totalTime': response_feature['attributes']['EditDate'] + response_feature['attributes']['CreationDate'],
                     })
 
     assessment_responses_df = DataFrame(assessment_responses)
-    assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id'], dropna=False).EditDate.idxmax(),:]
+    assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id'], dropna=False).totalTime.idxmax(),:]
     assessment_responses_df = assessment_responses_df.replace({np.nan: None})
     assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
     # loop through assessment questions and check if they need to be added or updated in base service
@@ -126,8 +126,8 @@ def load_responses(survey, response_features, token, eventType):
             adds.append(response)
 
     data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-    r = requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
-                  data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-    print(r)
+    # r = requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
+    #               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+    # print(r)
 
 
