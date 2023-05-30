@@ -56,10 +56,10 @@ def load_responses(survey, response_features, token, eventType):
             # todo: for updates look for existing record and copy to history table
             # ignore eventType and always check?? based on what? if someone can enter then what happens...
             # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
-        #
-        # requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
-        #               params={'token': token, 'f': 'json'},
-        #               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+
+        requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
+                      params={'token': token, 'f': 'json'},
+                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
     table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
     assessment_responses = []
@@ -126,8 +126,8 @@ def load_responses(survey, response_features, token, eventType):
             adds.append(response)
 
     data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-    # r = requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
-    #               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+    r = requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
+                  data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
     # print(r)
 
 
