@@ -92,7 +92,7 @@ def load_responses(survey, response_features, token, eventType):
                 elif k in master_questions:
                     master_question = master_questions[k]
                     try:
-                        v_decoded = master_question.lookup.lookups.get(label=v).description
+                        v_decoded = master_question.lookup.lookups.get(label=v).label
                     except ObjectDoesNotExist:
                         v_decoded = None
                     assessment_responses.append({
