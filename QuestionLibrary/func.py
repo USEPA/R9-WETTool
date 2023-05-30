@@ -94,7 +94,8 @@ def load_responses(survey, response_features, token, eventType):
                     try:
                         v_decoded = master_question.lookup.lookups.get(label=v).label
                     except ObjectDoesNotExist:
-                        v_decoded = None
+                        # if not match just stick the value available into display
+                        v_decoded = v
                     assessment_responses.append({
                         'question': master_questions[k].question,
                         'response': v,
