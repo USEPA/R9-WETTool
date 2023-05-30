@@ -1,32 +1,60 @@
 from django.contrib import admin, sites
+from django.http import HttpResponse
+from dramatiq import pipeline
+
 from .models import *
 from django.forms import ModelForm, ModelChoiceField, CharField, HiddenInput
 from django import forms
 from django.core.exceptions import ValidationError
 import json
 from django.contrib.admin.widgets import AutocompleteSelect
-
-from .views import download_xls_action, load_selected_records_action
+from django.contrib import messages
 from fieldsets_with_inlines import FieldsetsInlineMixin
-from .func import load_responses
+from .tasks import load_responses, get_features_to_load, load_surveys
 
 
 def load_selected_responses(modeladmin, request, queryset):
     for survey in queryset:
-        # todo: figure out add vs edit event type here
         social = request.user.social_auth.get(provider='agol')
         token = social.get_access_token(load_strategy())
 
-
-
         response = requests.get(f"{survey.survey123_service}/0/query",
-                                params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token, "f": "json"})
+                                params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token,
+                                        "f": "json"})
         features = response.json().get('features', [])
-        load_responses(survey, features, token, 'editData')
+        load_responses.message(survey.pk, features, token, 'editData')
+        messages.success(request, 'Loading latest responses')
+
+load_selected_responses.short_description = 'Get latest submitted responses from survey'
+
+def download_xls_action(modeladmin, request, queryset):
+    for obj in queryset:
+        Survey.generate_xlsform(obj)
+        path = os.path.join(settings.BASE_DIR, f'QuestionLibrary\\generated_forms\\{obj.id}.xlsx')
+        excel = open(path, "rb")
+        response = HttpResponse(excel, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename=survey_config_service_{obj.name}.xlsx'
+        # messages.success(request, 'Download Successful')
+        return response
 
 
-load_selected_responses.short_description = '(Re)Load submitted responses from survey'
 
+download_xls_action.short_description = 'Download Survey123 Service Configuration'
+
+
+def load_selected_records_action(modeladmin, request, queryset):
+    social = request.user.social_auth.get(provider='agol')
+    token = social.get_access_token(load_strategy())
+
+    for obj in queryset:
+        pipeline([
+            get_features_to_load.message(obj.pk, token),
+            load_surveys.message(obj.survey123_service, token)
+        ])
+        messages.success(request, 'Loading selected records into survey')
+
+
+load_selected_records_action.short_description = 'Load Selected Records to Survey123'
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
