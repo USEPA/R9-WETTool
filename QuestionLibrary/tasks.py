@@ -12,7 +12,6 @@ import requests
 from dramatiq import actor
 
 
-
 @actor()
 def set_survey_to_submitted(payload, token):
     # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
@@ -37,24 +36,21 @@ def set_survey_to_submitted(payload, token):
                   data=data_status, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
 
-# load_responses(survey, [payload['feature']], token, payload['eventType'])
-@transaction.atomic
 @actor()
-def load_responses(survey_pk, response_features, token, eventType):
-    survey = Survey.objects.get(pk=survey_pk)
-    # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
-    # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
-    #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
-    # # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
-    # #     raise PermissionDenied
-
-    #not sure if we will need origin_feature at any point
-    # origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
+def get_submitted_responses(survey_service, token):
+    response = requests.get(f"{survey_service}/0/query",
+                            params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token,
+                                    "f": "json"})
+    r_json = response.json()
+    if 'error' in r_json:
+        raise Exception(response.content)
+    return r_json.get('features', [])
 
 
-
+@actor()
+def process_response_features(survey_base_map_service, survey_service_config, survey_layer, token, eventType, response_features):
     # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
-    base_service_config = json.loads(survey.service_config)['layers']
+    base_service_config = json.loads(survey_service_config)['layers']
     # todo: deal with new features and how that affects creating records in related tables
     for layer in base_service_config:
         layer_prefix = f"layer_{layer['id']}_"  # get prefix for this layers attributes
@@ -68,7 +64,7 @@ def load_responses(survey_pk, response_features, token, eventType):
                     f['attributes'][k.replace(layer_prefix, "")] = v
 
             # if layer is the base layer holding geometry grab it and put it back into base service
-            if layer['id'] == int(survey.layer):
+            if layer['id'] == int(survey_layer):
                 f['geometry'] = response_feature.get('geometry', None)
             features.append(f)
         data = {'adds' if eventType == 'addData' else
@@ -79,11 +75,28 @@ def load_responses(survey_pk, response_features, token, eventType):
             # ignore eventType and always check?? based on what? if someone can enter then what happens...
             # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
 
-        requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
+        r = requests.post(f"{survey_base_map_service}/{layer['id']}/applyEdits",
                       params={'token': token, 'f': 'json'},
                       data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+        if 'error' in r.json():
+            raise Exception(r.content)
 
-    table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
+    return response_features #pass through pipeline so next load_responses can run on these responses
+
+
+@actor()
+def load_responses(survey_base_map_service, survey_service_config, survey_assessment_layer, token, response_features):
+    # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
+    # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
+    #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
+    # # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
+    # #     raise PermissionDenied
+
+    #not sure if we will need origin_feature at any point
+    # origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
+
+
+    table = next(x for x in json.loads(survey_service_config)['tables'] if x['id'] == int(survey_assessment_layer))
     assessment_responses = []
     for response_feature in response_features:
         fac_id = None
@@ -126,49 +139,53 @@ def load_responses(survey_pk, response_features, token, eventType):
                         'EditDate': response_feature['attributes']['EditDate']
                     })
 
-    assessment_responses_df = DataFrame(assessment_responses)
-    assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id'], dropna=False).EditDate.idxmax(),:]
-    assessment_responses_df = assessment_responses_df.replace({np.nan: None})
-    assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
-    # loop through assessment questions and check if they need to be added or updated in base service
-    updates, adds = [], []
-    for response in assessment_responses:
-        where = f"question='{response['attributes']['question']}' AND system_id='{response['attributes']['system_id']}'"
-        if response['attributes']['facility_id'] is not None:
-            where += f" AND facility_id='{response['attributes']['facility_id']}'"
-        r = requests.get(f"{survey.base_map_service}/{table['id']}/query",
-                         params={'where': where, 'token': token, 'f': 'json', 'outFields': '*'})
-        features = r.json()['features']
-        if len(features) == 1:
-            for k, v in response['attributes'].items():
-                features[0]['attributes'][k] = v
-            updates.append(features[0])
-        else:
-            adds.append(response)
+    if len(assessment_responses) > 0:
+        assessment_responses_df = DataFrame(assessment_responses)
+        assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id'], dropna=False).EditDate.idxmax(),:]
+        assessment_responses_df = assessment_responses_df.replace({np.nan: None})
+        assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
+        # loop through assessment questions and check if they need to be added or updated in base service
+        updates, adds = [], []
+        for response in assessment_responses:
+            where = f"question='{response['attributes']['question']}' AND system_id='{response['attributes']['system_id']}'"
+            if response['attributes']['facility_id'] is not None:
+                where += f" AND facility_id='{response['attributes']['facility_id']}'"
+            r = requests.get(f"{survey_base_map_service}/{table['id']}/query",
+                             params={'where': where, 'token': token, 'f': 'json', 'outFields': '*'})
+            features = r.json()['features']
+            if len(features) == 1:
+                for k, v in response['attributes'].items():
+                    features[0]['attributes'][k] = v
+                updates.append(features[0])
+            else:
+                adds.append(response)
 
-    data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-    r = requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
-                  data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-    print(r)
-    
+        data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
+        r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
+                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+        if 'error' in r.json():
+            raise Exception(r.content)
+
+
 @actor()
 def load_surveys(service_url, token, features):
-    # def postAttributes(self, user):
     data = urlencode({"adds": json.dumps(features)})
 
     delete_r = requests.post(url=f'{service_url}/0/deleteFeatures', params={'token': token, 'f': 'json'},
                       data={"where": "survey_status is null"}, headers={'Content-type': 'application/x-www-form-urlencoded'})
+    if 'error' in delete_r.json():
+        raise Exception(delete_r.content)
 
     add_r = requests.post(url=f'{service_url}/0/applyEdits', params={'token': token, 'f': 'json'},
                       data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-    
+    if 'error' in add_r.json():
+        raise Exception(add_r.content)
+
+
 @actor()
 def get_features_to_load(survey_pk, token):
     survey = Survey.objects.get(pk=survey_pk)
-    # def getBaseAttributes(self, user):
     features = []
-    # r = requests.get(url=self.base_map_service, params={'token': token, 'f': 'json'})
-
     service_config_layers = json.loads(survey.service_config)['layers']
     # get layers that serve a origin in relationship
     # origin_layers = [x for x in service_config_layers if

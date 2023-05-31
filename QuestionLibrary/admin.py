@@ -10,7 +10,8 @@ import json
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.contrib import messages
 from fieldsets_with_inlines import FieldsetsInlineMixin
-from .tasks import load_responses, get_features_to_load, load_surveys
+from .tasks import load_responses, get_features_to_load, load_surveys, get_submitted_responses, \
+    process_response_features
 
 
 def load_selected_responses(modeladmin, request, queryset):
@@ -18,11 +19,12 @@ def load_selected_responses(modeladmin, request, queryset):
         social = request.user.social_auth.get(provider='agol')
         token = social.get_access_token(load_strategy())
 
-        response = requests.get(f"{survey.survey123_service}/0/query",
-                                params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token,
-                                        "f": "json"})
-        features = response.json().get('features', [])
-        load_responses.message(survey.pk, features, token, 'editData')
+        pipeline([
+            get_submitted_responses.message(survey.survey123_service, token),
+            process_response_features.message(survey.base_map_service, survey.service_config, survey.layer, token, 'editData'),
+            load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer, token)
+        ]).run()
+
         messages.success(request, 'Loading latest responses')
 
 load_selected_responses.short_description = 'Get latest submitted responses from survey'
@@ -47,10 +49,8 @@ def load_selected_records_action(modeladmin, request, queryset):
     token = social.get_access_token(load_strategy())
 
     for obj in queryset:
-        pipeline([
-            get_features_to_load.message(obj.pk, token),
-            load_surveys.message(obj.survey123_service, token)
-        ])
+        pipe = get_features_to_load.message(obj.pk, token) | load_surveys.message(obj.survey123_service, token)
+        pipe.run()
         messages.success(request, 'Loading selected records into survey')
 
 
