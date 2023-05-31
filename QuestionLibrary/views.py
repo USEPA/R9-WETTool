@@ -3,11 +3,12 @@ from django.views.generic import View
 from django.http.response import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from dramatiq import pipeline
 from social_django.utils import load_strategy
 import requests
 import urllib
 
-from QuestionLibrary.tasks import load_responses, set_survey_to_submitted
+from QuestionLibrary.tasks import load_responses, set_survey_to_submitted, process_response_features
 from QuestionLibrary.models import *
 from wsgiref.util import FileWrapper
 import csv
@@ -95,9 +96,16 @@ def webhook(request):
         if payload['eventType'] not in ['addData', 'editData']:
             return HttpResponse("Ok")
 
-        survey_pk = Survey.objects.get(survey123_service=payload['surveyInfo']['serviceUrl']).pk
+        survey = Survey.objects.get(survey123_service=payload['surveyInfo']['serviceUrl'])
         set_survey_to_submitted.message(payload)
-        load_responses.message(survey_pk, payload['features'], payload['portalInfo']['token'], payload['eventType'])
+
+        pipeline([
+            process_response_features.message(survey.base_map_service, survey.service_config, survey.layer,
+                                              payload['portalInfo']['token'], payload['eventType'],
+                                              [payload['feature']]),
+            load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer,
+                                   payload['portalInfo']['token'])
+        ]).run()
 
         # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
         # base_service_config = json.loads(survey.service_config)['layers']
