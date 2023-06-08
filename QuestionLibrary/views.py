@@ -101,9 +101,9 @@ def webhook(request):
 
         pipeline([
             set_survey_to_submitted.message(payload),
-            process_response_features.message_with_options(survey.base_map_service, survey.service_config, survey.layer,
+            process_response_features.message_with_options(args=(survey.base_map_service, survey.service_config, survey.layer,
                                               payload['portalInfo']['token'], payload['eventType'],
-                                              [payload['feature']], pipe_ignore=True),
+                                              [payload['feature']]), pipe_ignore=True),
             load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer,
                                    payload['portalInfo']['token'])
         ]).run()
