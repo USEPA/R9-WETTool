@@ -30,10 +30,10 @@ def set_survey_to_submitted(payload):
     # the survey inbox will be filtered to only show survey status = null
 
     if 'survey_status' in payload['feature']['attributes']:
-        objectIdField = payload['applyEdits'][0]['layerInfo']['objectIdField']
+
         token = payload['portalInfo']['token']
         data = {'updates': json.dumps({'attributes': {
-            'objectid': payload['feature']['attributes'][objectIdField],
+            'objectid': payload['feature']['result']['objectId'],
             'survey_status': 'submitted'}})
         }
         r = requests.post(f"{payload['surveyInfo']['serviceUrl']}/{payload['feature']['layerInfo']['id']}/applyEdits",
