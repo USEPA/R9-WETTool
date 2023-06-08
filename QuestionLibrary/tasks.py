@@ -5,7 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from pandas import DataFrame
 
-from QuestionLibrary.func import formattedFieldName, get_all_features, TokenExpired
+from QuestionLibrary.func import formattedFieldName, get_all_features, TokenExpired, get_token
 from QuestionLibrary.models import Survey, MasterQuestion
 import json
 import requests
@@ -44,6 +44,7 @@ def set_survey_to_submitted(payload):
 
 @actor()
 def get_submitted_responses(survey_service, token):
+    token = get_token()
     response = requests.get(f"{survey_service}/0/query",
                             params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token,
                                     "f": "json"})
@@ -60,6 +61,7 @@ def get_submitted_responses(survey_service, token):
 def process_response_features(survey_base_map_service, survey_service_config, survey_layer, token, eventType,
                               response_features):
     try:
+        token = get_token() # override for now
         # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix
         # off of the fields
         base_service_config = json.loads(survey_service_config)['layers']
@@ -102,6 +104,7 @@ def process_response_features(survey_base_map_service, survey_service_config, su
 @actor()
 def load_responses(survey_base_map_service, survey_service_config, survey_assessment_layer, token, response_features):
     try:
+        token = get_token() # override for now
         # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
         # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
         #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
@@ -193,6 +196,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
 
 @actor()
 def load_surveys(service_url, token, features):
+    token = get_token()  # override for now
     data = urlencode({"adds": json.dumps(features)})
 
     delete_r = requests.post(url=f'{service_url}/0/deleteFeatures', params={'token': token, 'f': 'json'},
@@ -209,6 +213,7 @@ def load_surveys(service_url, token, features):
 
 @actor()
 def get_features_to_load(survey_pk, token):
+    token = get_token()  # override for now
     survey = Survey.objects.get(pk=survey_pk)
     features = []
     service_config_layers = json.loads(survey.service_config)['layers']
@@ -299,7 +304,8 @@ def get_features_to_load(survey_pk, token):
 
 
 @actor
-def approve_draft_dashboard_service(base_service_url, draft_service_url, approved_service_url, token):
+def approve_draft_dashboard_service(base_service_url, draft_service_url, approved_service_url):
+    token = get_token()
     # prep removing current features
     current_features_json = get_all_features(approved_service_url, token)
 

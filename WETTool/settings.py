@@ -221,3 +221,4 @@ DRAMATIQ_BROKER = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
+TASK_RUNNER_AGOL_USER = getattr(local_settings, 'TASK_RUNNER_AGOL_USER', None)

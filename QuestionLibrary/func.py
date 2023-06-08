@@ -1,4 +1,7 @@
 import requests
+from django.conf import settings
+from django.contrib.auth.models import User
+from social_django.utils import load_strategy
 
 
 class TokenExpired(Exception):
@@ -37,3 +40,9 @@ def get_all_features(url, token, where="1=1"):
             break
         r['features'] = f
     return r
+
+
+def get_token():
+    user = User.objects.get(username=settings.TASK_RUNNER_AGOL_USER)
+    social = user.social_auth.get(provider='agol')
+    return social.get_access_token(load_strategy())
