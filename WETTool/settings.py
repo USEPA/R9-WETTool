@@ -19,7 +19,6 @@ from . import local_settings
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
@@ -31,7 +30,6 @@ DEBUG = getattr(local_settings, 'DEBUG', False)
 
 ALLOWED_HOSTS = getattr(local_settings, 'ALLOWED_HOSTS', [])
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -42,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_dramatiq',
     'QuestionLibrary',
     'agol_oauth2',
     'social_django',
@@ -83,12 +82,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'WETTool.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 DATABASES = getattr(local_settings, 'DATABASES', {})
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -108,7 +105,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
@@ -121,7 +117,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
 
 XLS_FORM_TEMPLATE = 'survey123_template.xlsx'
 
@@ -143,8 +138,6 @@ SOCIAL_AUTH_PIPELINE = [  # Note: Sequence of functions matters here.
 
 AUTHENTICATION_BACKENDS = getattr(local_settings, 'AUTHENTICATION_BACKENDS', [])
 
-
-
 INTERNAL_IPS = getattr(local_settings, 'INTERNAL_IPS', [])
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
@@ -160,7 +153,7 @@ STATIC_URL = f'/{URL_PREFIX}static/'
 
 STATIC_ROOT = 'static'
 
-CORS_ORIGIN_ALLOW_ALL = True # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
+CORS_ORIGIN_ALLOW_ALL = True  # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
 CORS_ALLOW_CREDENTIALS = True
 
 ADMIN_REORDER = (
@@ -184,9 +177,10 @@ ADMIN_REORDER = (
         {'model': 'QuestionLibrary.MasterQuestion', 'label': 'Question List'},
         {'model': 'QuestionLibrary.QuestionSet', 'label': 'Question Sets'},
         {'model': 'QuestionLibrary.Survey', 'label': 'Assessments'},
+        {'model': 'QuestionLibrary.Dashboard', 'label': 'Dashboards'},
         {'model': 'QuestionLibrary.LookupGroup', 'label': 'Response Types'},
         {'model': 'QuestionLibrary.FeatureServiceResponse', 'label': 'Feature Service/Survey123 Field Mappings'},
-     )},
+    )},
 )
 
 USE_X_FORWARDED_HOST = getattr(local_settings, 'USE_X_FORWARDED_HOST', False)
@@ -202,4 +196,29 @@ LOGGING['handlers']['file'] = {'level': 'ERROR',
                                'filters': ['require_debug_false'],
                                'class': 'logging.FileHandler',
                                'filename': os.path.join(BASE_DIR, 'error.log')}
-LOGGING['loggers']['django'] = {'handlers': ['console', 'slack', 'file'], 'level': 'INFO', }
+
+LOGGING['handlers']['drama_file'] = {'level': 'INFO',
+                                     'filters': ['require_debug_false'],
+                                     'class': 'logging.FileHandler',
+                                     'filename': os.path.join(BASE_DIR, 'drama.log')}
+LOGGING['loggers']['django'] = {'handlers': ['console', 'slack', 'file'], 'level': 'INFO'}
+LOGGING['loggers']['dramatiq'] = {'handlers': ['console', 'slack', 'drama_file'], 'level': 'INFO'}
+
+DRAMATIQ_BROKER = {
+    "BROKER": "dramatiq.brokers.rabbitmq.RabbitmqBroker",
+    "OPTIONS": {
+        "url": "amqp://localhost:5672",
+    },
+    "MIDDLEWARE": [
+        "dramatiq.middleware.Prometheus",
+        "dramatiq.middleware.AgeLimit",
+        "dramatiq.middleware.TimeLimit",
+        "dramatiq.middleware.Callbacks",
+        "dramatiq.middleware.Pipelines",
+        "dramatiq.middleware.Retries",
+        "django_dramatiq.middleware.DbConnectionsMiddleware",
+    ]
+}
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
