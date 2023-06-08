@@ -5,16 +5,18 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from pandas import DataFrame
 
-from QuestionLibrary.func import formattedFieldName
+from QuestionLibrary.func import formattedFieldName, get_all_features, TokenExpired
 from QuestionLibrary.models import Survey, MasterQuestion
 import json
 import requests
 from dramatiq import actor
 import logging
-logger = logging.getLogger('django')
+
+logger = logging.getLogger('dramatiq')
+
 
 @actor()
-def set_survey_to_submitted(payload, token):
+def set_survey_to_submitted(payload):
     # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
     # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
     #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
@@ -26,15 +28,18 @@ def set_survey_to_submitted(payload, token):
 
     # flip the survey status field to submitted in the survey service in
     # the survey inbox will be filtered to only show survey status = null
-    survey_status_switch = []
-    for k, v in payload['feature']['attributes'].items():
-        if k == 'survey_status':
-            survey_status_switch.append({'attributes': {
-                'objectid': payload['feature']['result']['objectId'],
-                'survey_status': 'submitted'}})
-    data_status = {'updates': json.dumps(survey_status_switch)}
-    requests.post(f"{payload['surveyInfo']}/0/applyEdits", params={'token': token, 'f': 'json'},
-                  data=data_status, headers={'Content-type': 'application/x-www-form-urlencoded'})
+
+    if 'survey_status' in payload['feature']['attributes']:
+        objectIdField = payload['feature']['layerInfo']['objectIdField']
+        token = payload['portalInfo']['token']
+        data = {'updates': json.dumps({'attributes': {
+            'objectid': payload['feature']['attributes'][objectIdField],
+            'survey_status': 'submitted'}})
+        }
+        r = requests.post(f"{payload['surveyInfo']['serviceUrl']}/{payload['feature']['layerInfo']['id']}/applyEdits",
+                          params={'token': token, 'f': 'json'},
+                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+        r.raise_for_status()  # if 400 or 500s truly occur then raise error so retry occurs
 
 
 @actor()
@@ -42,16 +47,21 @@ def get_submitted_responses(survey_service, token):
     response = requests.get(f"{survey_service}/0/query",
                             params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token,
                                     "f": "json"})
+    response.raise_for_status()
     r_json = response.json()
     if 'error' in r_json:
-        raise Exception(response.content)
+        # log but don't retry
+        logger.exception(response.content)
+
     return r_json.get('features', [])
 
 
 @actor()
-def process_response_features(survey_base_map_service, survey_service_config, survey_layer, token, eventType, response_features):
+def process_response_features(survey_base_map_service, survey_service_config, survey_layer, token, eventType,
+                              response_features):
     try:
-        # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
+        # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix
+        # off of the fields
         base_service_config = json.loads(survey_service_config)['layers']
         # todo: deal with new features and how that affects creating records in related tables
         for layer in base_service_config:
@@ -72,20 +82,20 @@ def process_response_features(survey_base_map_service, survey_service_config, su
             data = {'adds' if eventType == 'addData' else
                     ('updates' if eventType == 'editData' else None): json.dumps(features)}
 
-
-                # todo: for updates look for existing record and copy to history table
-                # ignore eventType and always check?? based on what? if someone can enter then what happens...
-                # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
+            # todo: for updates look for existing record and copy to history table
+            # ignore eventType and always check?? based on what? if someone can enter then what happens...
+            # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
 
             r = requests.post(f"{survey_base_map_service}/{layer['id']}/applyEdits",
-                          params={'token': token, 'f': 'json'},
-                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+                              params={'token': token, 'f': 'json'},
+                              data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
             if 'error' in r.json():
-                raise Exception(r.content)
+                # log but don't retry
+                logger.exception(r.content)
 
-        return response_features #pass through pipeline so load_responses can run on these responses
+        return response_features  # pass through pipeline so load_responses can run on these responses
     except Exception as e:
-        logger.exception(response_features)
+        logger.exception(e)
         raise e
 
 
@@ -98,16 +108,15 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
         # # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
         # #     raise PermissionDenied
 
-        #not sure if we will need origin_feature at any point
+        # not sure if we will need origin_feature at any point
         # origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
-
 
         table = next(x for x in json.loads(survey_service_config)['tables'] if x['id'] == int(survey_assessment_layer))
         assessment_responses = []
         for response_feature in response_features:
             fac_id = None
             if fac_id is None and response_feature['attributes'].get('layer_1_FacilityID') is not None:
-               fac_id = response_feature['attributes']['layer_1_FacilityID']
+                fac_id = response_feature['attributes']['layer_1_FacilityID']
             else:
                 fac_id = None
             master_questions = {q.formatted_survey_field_name: q for q in MasterQuestion.objects.all()}
@@ -147,7 +156,9 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
 
         if len(assessment_responses) > 0:
             assessment_responses_df = DataFrame(assessment_responses)
-            assessment_responses_df = assessment_responses_df.loc[assessment_responses_df.groupby(['question', 'system_id', 'facility_id'], dropna=False).EditDate.idxmax(),:]
+            assessment_responses_df = assessment_responses_df.loc[
+                                      assessment_responses_df.groupby(['question', 'system_id', 'facility_id'],
+                                                                      dropna=False).EditDate.idxmax(), :]
             assessment_responses_df = assessment_responses_df.replace({np.nan: None})
             assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
             # loop through assessment questions and check if they need to be added or updated in base service
@@ -167,10 +178,11 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                     adds.append(response)
 
             data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-            r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
-                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+            r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits",
+                              params={'token': token, 'f': 'json'},
+                              data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
             if 'error' in r.json():
-                raise Exception(r.content)
+                logger.exception(response_features)
     except Exception as e:
         logger.exception(response_features)
         raise e
@@ -181,14 +193,15 @@ def load_surveys(service_url, token, features):
     data = urlencode({"adds": json.dumps(features)})
 
     delete_r = requests.post(url=f'{service_url}/0/deleteFeatures', params={'token': token, 'f': 'json'},
-                      data={"where": "survey_status is null"}, headers={'Content-type': 'application/x-www-form-urlencoded'})
+                             data={"where": "survey_status is null"},
+                             headers={'Content-type': 'application/x-www-form-urlencoded'})
     if 'error' in delete_r.json():
-        raise Exception(delete_r.content)
+        logger.exception(delete_r.content)
 
     add_r = requests.post(url=f'{service_url}/0/applyEdits', params={'token': token, 'f': 'json'},
-                      data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
     if 'error' in add_r.json():
-        raise Exception(add_r.content)
+        logger.exception(add_r.content)
 
 
 @actor()
@@ -280,3 +293,35 @@ def get_features_to_load(survey_pk, token):
 
             # print(features)
     return features
+
+
+@actor
+def approve_draft_dashboard_service(base_service_url, draft_service_url, approved_service_url, token):
+    # prep removing current features
+    current_features_json = get_all_features(approved_service_url, token)
+
+    delete_features = []
+    for f in current_features_json["features"]:
+        # if here is just a safety net in case someone swaps services accidentially
+        if f['attributes']['qc_status'] == 'approved':
+            delete_features.append(f['attributes'][current_features_json['objectIdFieldName']])
+
+    # prep adding draft features to approved
+    draft_features_json = get_all_features(draft_service_url, token)
+
+    add_features = []
+    for f in draft_features_json["features"]:
+        # if here is just a safety net in case someone swaps services accidentially
+        if f['attributes']['qc_status'] == 'draft':
+            keys = [k for k in f['attributes']]
+            [f['attributes'].pop(k) for k in keys if k.lower() in ['objectid', 'globalid']]
+            f['attributes']['qc_status'] = 'approved'
+            add_features.append(f)
+
+    # add new approved features and delete old ones from base service
+    data = urlencode({"adds": json.dumps(add_features), "deletes": json.dumps(delete_features)})
+    update_features_response = requests.post(f"{base_service_url}/applyEdits", params={"token": token, "f": "json"},
+                                             data=data,
+                                             headers={'Content-type': 'application/x-www-form-urlencoded'})
+    if "error" in update_features_response.json():
+        logger.exception(update_features_response.content)

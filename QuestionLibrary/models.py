@@ -5,6 +5,8 @@ import shutil
 import pandas as pd
 import os
 import re
+
+from django.utils.safestring import mark_safe
 from social_django.utils import load_strategy
 from django.contrib.auth.models import User
 import requests, json
@@ -514,3 +516,24 @@ class RelatedQuestionList(models.Model):
     related = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT, related_name='master_questions')
     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
     relevant_field = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True)
+
+
+class Dashboard(models.Model):
+    name = models.CharField(max_length=500)
+    draft_id = models.UUIDField()
+    production_id = models.UUIDField()
+    base_feature_service = models.URLField()
+    draft_service_view = models.URLField()
+    production_service_view = models.URLField()
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def view_draft(self):
+        return mark_safe(f'<a target="_blank" href="https://www.arcgis.com/apps/dashboards/{self.draft_id.hex}">View {self.name} Draft</a>')
+
+    @property
+    def view_production(self):
+        return mark_safe(f'<a target="_blank" href="https://www.arcgis.com/apps/dashboards/{self.production_id.hex}">View {self.name} Production</a>')
+

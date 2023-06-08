@@ -11,7 +11,8 @@ from django.contrib.admin.widgets import AutocompleteSelect
 from django.contrib import messages
 from fieldsets_with_inlines import FieldsetsInlineMixin
 from .tasks import load_responses, get_features_to_load, load_surveys, get_submitted_responses, \
-    process_response_features
+    process_response_features, approve_draft_dashboard_service
+from datetime import datetime
 
 
 def load_selected_responses(modeladmin, request, queryset):
@@ -293,3 +294,25 @@ class QuestionSetAdmin(admin.ModelAdmin):
     fields = ['name', 'owner']
     # forms = QuestionSetFilters
     inlines = [QuestionSetInline]
+
+
+def approve_dashboard(modeladmin, request, queryset):
+    social = request.user.social_auth.get(provider='agol')
+    token = social.get_access_token(load_strategy())
+
+    for dashboard in queryset:
+        pipeline([
+            approve_draft_dashboard_service.message(dashboard.base_feature_service,
+                                                    dashboard.draft_service_view,
+                                                    dashboard.production_service_view,
+                                                    token)
+        ]).run()
+
+        messages.success(request, 'Approving dashboard')
+
+approve_dashboard.short_description = 'Approve selected dashboard(s)'
+
+@admin.register(Dashboard)
+class DashboardAdmin(admin.ModelAdmin):
+    list_display = ['name', 'view_draft', 'view_production']
+    actions = [approve_dashboard]
