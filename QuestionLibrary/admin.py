@@ -1,32 +1,61 @@
 from django.contrib import admin, sites
+from django.http import HttpResponse
+from dramatiq import pipeline
+
 from .models import *
 from django.forms import ModelForm, ModelChoiceField, CharField, HiddenInput
 from django import forms
 from django.core.exceptions import ValidationError
 import json
 from django.contrib.admin.widgets import AutocompleteSelect
-
-from .views import download_xls_action, load_selected_records_action
+from django.contrib import messages
 from fieldsets_with_inlines import FieldsetsInlineMixin
-from .func import load_responses
+from .tasks import load_responses, get_features_to_load, load_surveys, get_submitted_responses, \
+    process_response_features, approve_draft_dashboard_service
+from datetime import datetime
 
 
 def load_selected_responses(modeladmin, request, queryset):
     for survey in queryset:
-        # todo: figure out add vs edit event type here
         social = request.user.social_auth.get(provider='agol')
         token = social.get_access_token(load_strategy())
 
+        pipeline([
+            get_submitted_responses.message(survey.survey123_service, token),
+            process_response_features.message(survey.base_map_service, survey.service_config, survey.layer, token, 'editData'),
+            load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer, token)
+        ]).run()
+
+        messages.success(request, 'Loading latest responses')
+
+load_selected_responses.short_description = 'Get latest submitted responses from survey'
+
+def download_xls_action(modeladmin, request, queryset):
+    for obj in queryset:
+        Survey.generate_xlsform(obj)
+        path = os.path.join(settings.BASE_DIR, f'QuestionLibrary\\generated_forms\\{obj.id}.xlsx')
+        excel = open(path, "rb")
+        response = HttpResponse(excel, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename=survey_config_service_{obj.name}.xlsx'
+        # messages.success(request, 'Download Successful')
+        return response
 
 
-        response = requests.get(f"{survey.survey123_service}/0/query",
-                                params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token, "f": "json"})
-        features = response.json().get('features', [])
-        load_responses(survey, features, token, 'editData')
+
+download_xls_action.short_description = 'Download Survey123 Service Configuration'
 
 
-load_selected_responses.short_description = '(Re)Load submitted responses from survey'
+def load_selected_records_action(modeladmin, request, queryset):
+    social = request.user.social_auth.get(provider='agol')
+    token = social.get_access_token(load_strategy())
 
+    for obj in queryset:
+        pipe = get_features_to_load.message(obj.pk, token) | load_surveys.message(obj.survey123_service, token)
+        pipe.run()
+        messages.success(request, 'Loading selected records into survey')
+
+
+load_selected_records_action.short_description = 'Load Selected Records to Survey123'
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
@@ -265,3 +294,25 @@ class QuestionSetAdmin(admin.ModelAdmin):
     fields = ['name', 'owner']
     # forms = QuestionSetFilters
     inlines = [QuestionSetInline]
+
+
+def approve_dashboard(modeladmin, request, queryset):
+    social = request.user.social_auth.get(provider='agol')
+    token = social.get_access_token(load_strategy())
+
+    for dashboard in queryset:
+        pipeline([
+            approve_draft_dashboard_service.message(dashboard.base_feature_service,
+                                                    dashboard.draft_service_view,
+                                                    dashboard.production_service_view,
+                                                    token)
+        ]).run()
+
+        messages.success(request, 'Approving dashboard')
+
+approve_dashboard.short_description = 'Approve selected dashboard(s)'
+
+@admin.register(Dashboard)
+class DashboardAdmin(admin.ModelAdmin):
+    list_display = ['name', 'view_draft', 'view_production']
+    actions = [approve_dashboard]

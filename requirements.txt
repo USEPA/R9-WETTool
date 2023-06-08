@@ -1,5 +1,5 @@
-django-mssql-backend>=2.8.0,<2.8.99
-django>=2.2,<2.2.99
+django>=3.2,<3.2.99
+mssql-django
 pandas
 openpyxl
 xlrd==1.2.0
@@ -9,3 +9,5 @@ django-debug-toolbar
 django-modeladmin-reorder
 django-fieldsets-with-inlines
 git+https://github.com/Innovate-Inc/django-slack-logging.git#egg=django-slack-logging
+dramatiq[rabbitmq, watch]
+django-dramatiq
