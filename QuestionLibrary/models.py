@@ -171,39 +171,6 @@ class MasterQuestion(models.Model):
 
         return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description
 
-    def get_formatted_question(self, layer_index):
-        # must always return a list
-        if self.lookup is not None and self.response_type.survey123_field_type != 'select_one':
-            return [{
-                'type': 'begin_group',
-                'name': self.formatted_survey_field_name,
-                'label': self.question,
-                'relevant': f" {self.formatted_survey_category_field_relevant(layer_index)}",
-            },
-                {
-                    'type': self.formatted_survey_field_type.lower(),
-                    'name': f'{self.formatted_survey_field_name}_measure',
-                    'label': 'Measure'
-                },
-                {
-                    'type': f'select_one {self.lookup.formatted_survey_name.lower()}',
-                    'name': f'{self.formatted_survey_field_name}_choices',
-                    'label': self.lookup.description,
-                    'default': getattr(self.default_unit, 'label', None)
-                },
-                {
-                    'type': 'end group'
-                }
-
-            ]
-
-        return [{
-            'type': self.formatted_survey_field_type.lower(),
-            'name': self.formatted_survey_field_name,
-            'label': self.question,
-            'relevant': f"{self.formatted_survey_category_field_relevant(layer_index)}",
-            'required': f"{self.formatted_survey_category_field_relevant(layer_index)}",
-        }]
 
     class Meta:
         verbose_name = 'Master Question'
@@ -259,13 +226,30 @@ class Survey(models.Model):
     base_service_ready.boolean = True
     base_service_ready.short_description = "Download Service Config"
 
+    # returns the active records of relationship between questionset and actual question
+    def get_assigned_questions(self):
+        assigned_questions = []
+        for qs in self.question_set.all():
+            assigned_questions += qs.questionlist_set.filter(active=True).order_by('sort_order')
+        return assigned_questions
+
+    def get_base_domains(self):
+        config = json.loads(self.service_config)
+        domains = {}
+        for l in config['layers']:
+            for f in l['fields']:
+                if f['domain'] is not None:
+                    domains[f['domain']['name']] = f['domain']['codedValues']
+        return domains
+
     def generate_xlsform(self):
         template = os.path.join(settings.BASE_DIR, settings.XLS_FORM_TEMPLATE)
         output_survey = os.path.join(settings.BASE_DIR, f'QuestionLibrary\\generated_forms\\{self.id}.xlsx')
         shutil.copy(template, output_survey)
         orig_survey_df = pd.read_excel(output_survey, sheet_name='survey')
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
-        assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
+        
+        # assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
         feat_service = json.loads(self.service_config)
         # fields = self.get_formatted_fields()
 
@@ -310,8 +294,9 @@ class Survey(models.Model):
         geopoint_df = pd.DataFrame(geopoint)
 
         questions = []
-        for x in assigned_questions:
+        for x in self.get_assigned_questions():
             questions.extend(x.get_formatted_question(self.layer))
+
         questions_df = pd.DataFrame(questions)
         # all_questions_df = [questions_df, status_df]
         survey_df_all = [field_df, questions_df, status_df, geopoint_df]
@@ -325,15 +310,18 @@ class Survey(models.Model):
                 'label': x.description,
             } for x in assigned_lookups
         ]
-        fs_lookup = FeatureServiceResponse.objects.all().distinct()
-        fs_choices = [
-            {
-                'list_name': x.esri_field_type,
-                'name': x.esri_field_type,
-                'label': x.fs_response_type
 
-            } for x in fs_lookup
-        ]
+        #this should grab domains from base service
+        fs_domains = self.get_base_domains()
+        fs_choices = []
+        for name, values in fs_domains.items():
+            fs_choices += [
+                {
+                    'list_name': name,
+                    'name': v['code'],
+                    'label': v['name']
+                } for v in values
+            ]
         lookups_df = pd.DataFrame(choices)
         fs_lookups_df = pd.DataFrame(fs_choices)
         lookups_all = [lookups_df, fs_lookups_df]
@@ -369,6 +357,13 @@ class Survey(models.Model):
     def getSurveyService(self, user):
         self.getLayers(user=user, service=self.survey123_service)
 
+    # returns type and appearance
+    def get_base_feature_field_info(self, field):
+        if field['domain'] is not None:
+            appearance = "" if len(field['domain']['codedValues']) < 5 else "autocomplete"
+            return f"select_one {field['domain']['name']}", appearance
+        return FeatureServiceResponse.objects.get(fs_response_type=field['type']).esri_field_type, ""
+
     def get_formatted_fields(self):
         feat_service = json.loads(self.service_config)['layers']
         fields = []
@@ -393,11 +388,13 @@ class Survey(models.Model):
                             'readonly': 'yes'
                         })
                     elif y['name'] not in omit_fields:
+                        t, appearance = self.get_base_feature_field_info(y)
                         fields.append({
-                            'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                            'type': t,
                             'name': formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
-                            'readonly': 'pulldata("@property", "mode") = "edit"'
+                            'appearance': appearance,
+                            'readonly': 'yes' # todo: figure out if system should ever be collected on the fly...
                         })
                 fields.append({'type': 'end group'})
             elif x['name'] == 'Base_Facility_Inventory':
@@ -414,10 +411,12 @@ class Survey(models.Model):
                             'readonly': 'yes'
                         })
                     elif y['name'] not in omit_fields:
+                        t, appearance = self.get_base_feature_field_info(y)
                         fields.append({
-                            'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+                            'type': t,
                             'name': formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
+                            'appearance': appearance,
                             'readonly': 'pulldata("@property", "mode") = "edit"'
                         })
                 fields.append({'type':'end group'})
@@ -464,7 +463,7 @@ class Survey(models.Model):
                 for y in x['fields']:
                     if y['name'] not in omit_fields:
                         fields.append(
-                            {'type': 'text',
+                            {'type': 'text' if y['domain'] is None else f'select_one {y["domain"]["name"]}',
                              'name': formattedFieldName(x['id'], y['name']),
                              'label': y['alias'],
                              'readonly': 'yes'
@@ -500,7 +499,45 @@ class QuestionList(models.Model):
     set = models.ForeignKey('QuestionSet', on_delete=models.PROTECT)
     question = models.ForeignKey('MasterQuestion', on_delete=models.PROTECT)
     active = models.BooleanField(default=True)
+    required = models.BooleanField(default=True)
     sort_order = models.IntegerField(null=True, blank=True)
+
+    def get_formatted_required(self):
+        return "true" if self.required else "false"
+
+    def get_formatted_question(self, layer_index):
+        # must always return a list
+        if self.question.lookup is not None and self.question.response_type.survey123_field_type != 'select_one':
+            return [{
+                'type': 'begin_group',
+                'name': self.question.formatted_survey_field_name,
+                'label': self.question.question,
+                'relevant': f" {self.question.formatted_survey_category_field_relevant(layer_index)}",
+            },
+                {
+                    'type': self.question.formatted_survey_field_type.lower(),
+                    'name': f'{self.question.formatted_survey_field_name}_measure',
+                    'label': 'Measure'
+                },
+                {
+                    'type': f'select_one {self.question.lookup.formatted_survey_name.lower()}',
+                    'name': f'{self.question.formatted_survey_field_name}_choices',
+                    'label': self.question.lookup.description,
+                    'default': getattr(self.question.default_unit, 'label', None)
+                },
+                {
+                    'type': 'end group'
+                }
+
+            ]
+
+        return [{
+            'type': self.question.formatted_survey_field_type.lower(),
+            'name': self.question.formatted_survey_field_name,
+            'label': self.question.question,
+            'relevant': f"{self.question.formatted_survey_category_field_relevant(layer_index)}",
+            'required': f"{self.question.formatted_survey_category_field_relevant(layer_index)} and {self.get_formatted_required()}",
+        }]
 
 
 class SurveyResponse(models.Model):
