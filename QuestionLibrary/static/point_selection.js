@@ -12,7 +12,7 @@
                 esriConfig.request.trustedServers.push(host);
                 urlUtils.addProxyRule({
                     urlPrefix: 'services.arcgis.com/cJ9YHowT8TU7DUyn',
-                    proxyUrl: host + '/proxy/'
+                    proxyUrl: host + url_prefix + 'proxy/'
                 });
                 esriConfig.request.interceptors.push({
                     urls: ['https://services.arcgis.com/cJ9YHowT8TU7DUyn'],
