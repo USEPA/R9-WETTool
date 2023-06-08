@@ -97,12 +97,13 @@ def webhook(request):
             return HttpResponse("Ok")
 
         survey = Survey.objects.get(survey123_service=payload['surveyInfo']['serviceUrl'])
-        set_survey_to_submitted.message(payload)
+
 
         pipeline([
-            process_response_features.message(survey.base_map_service, survey.service_config, survey.layer,
+            set_survey_to_submitted.message(payload),
+            process_response_features.message_with_options(survey.base_map_service, survey.service_config, survey.layer,
                                               payload['portalInfo']['token'], payload['eventType'],
-                                              [payload['feature']]),
+                                              [payload['feature']], pipe_ignore=True),
             load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer,
                                    payload['portalInfo']['token'])
         ]).run()
