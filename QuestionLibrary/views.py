@@ -3,15 +3,15 @@ from django.views.generic import View
 from django.http.response import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from dramatiq import pipeline
 from social_django.utils import load_strategy
 import requests
 import urllib
 
-from QuestionLibrary.func import load_responses
+from QuestionLibrary.tasks import load_responses, set_survey_to_submitted, process_response_features
 from QuestionLibrary.models import *
 from wsgiref.util import FileWrapper
 import csv
-from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 import json
 from social_django.utils import load_strategy
@@ -87,29 +87,6 @@ class EsriProxy(View):
             return HttpResponse(status=500)
 
 
-def download_xls_action(modeladmin, request, queryset):
-    for obj in queryset:
-        Survey.generate_xlsform(obj)
-        path = os.path.join(settings.BASE_DIR, f'QuestionLibrary\\generated_forms\\{obj.id}.xlsx')
-        excel = open(path, "rb")
-        response = HttpResponse(excel, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename=survey_config_service_{obj.name}.xlsx'
-        # messages.success(request, 'Download Successful')
-        return response
-
-
-
-download_xls_action.short_description = 'Download Survey123 Service Configuration'
-
-
-def load_selected_records_action(modeladmin, request, queryset):
-    for obj in queryset:
-        obj.postAttributes(request.user)
-        messages.success(request, 'Records Successfully Loaded to Survey123')
-
-
-load_selected_records_action.short_description = 'Load Selected Records to Survey123'
-
 @csrf_exempt
 def webhook(request):
     body_unicode = request.body.decode('utf-8')
@@ -120,29 +97,16 @@ def webhook(request):
             return HttpResponse("Ok")
 
         survey = Survey.objects.get(survey123_service=payload['surveyInfo']['serviceUrl'])
+        set_survey_to_submitted.message(payload)
 
-        # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
-        # response = requests.get(f"{payload['portalInfo']['url']}/sharing/rest/community/self",
-        #                         params=dict(token=request.data['portalInfo']['token'], f='json'), timeout=30)
-        # # if response.status_code != requests.codes.ok or 'error' in response.text or request.data['userInfo']['username'] != response.json().get('username', ''):
-        # #     raise PermissionDenied
+        pipeline([
+            process_response_features.message(survey.base_map_service, survey.service_config, survey.layer,
+                                              payload['portalInfo']['token'], payload['eventType'],
+                                              [payload['feature']]),
+            load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer,
+                                   payload['portalInfo']['token'])
+        ]).run()
 
-        #not sure if we will need origin_feature at any point
-        # origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
-        token = payload['portalInfo']['token']
-        #flip the survey status field to submitted in the survey service in
-        #the survey inbox will be filtered to only show survey status = null
-        survey_status_switch = []
-        for k, v in payload['feature']['attributes'].items():
-            if k == 'survey_status':
-                survey_status_switch.append({'attributes': {
-                    'objectid': payload['feature']['result']['objectId'],
-                    'survey_status': 'submitted'}})
-        data_status = {'updates': json.dumps(survey_status_switch)}
-        requests.post(f"{survey.survey123_service}/0/applyEdits", params={'token': token, 'f': 'json'},
-                              data=data_status, headers={'Content-type': 'application/x-www-form-urlencoded'})
-
-        load_responses(survey, [payload['feature']], token, payload['eventType'])
         # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
         # base_service_config = json.loads(survey.service_config)['layers']
         # # todo: deal with new features and how that affects creating records in related tables
