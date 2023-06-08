@@ -142,7 +142,10 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                     elif k in master_questions:
                         master_question = master_questions[k]
                         try:
-                            v_decoded = master_question.lookup.lookups.get(label=v).description
+                            if master_question.lookup is not None:
+                                v_decoded = master_question.lookup.lookups.get(label=v).description
+                            else:
+                                v_decoded = v
                         except ObjectDoesNotExist:
                             v_decoded = None
                         assessment_responses.append({
