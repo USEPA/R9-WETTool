@@ -189,8 +189,8 @@
                                 e.columnApi.autoSizeAllColumns();
                                 highlightFeatures();
                             },
-                            onRowClicked: function (e) {
-                                selectFeatures([e.node.data.OBJECTID], !e.node.isSelected());
+                            onSelectionChanged: function (e) {
+                                selectFeatures();
                             }
                         };
                         let gridDiv = document.querySelector('#featuresTable');
@@ -207,9 +207,9 @@
                     });
                 }
 
-                function selectFeatures(ids, remove) {
-                    var current_selection = getCurrentSelection();
-                    var new_selection = remove ? current_selection.filter(id => !ids.includes(id)): new Set(current_selection.concat(ids));
+                function selectFeatures(selectedRows) {
+                    // var current_selection = getCurrentSelection();
+                    var new_selection = gridOptions.api.getSelectedRows().map(x => x.OBJECTID);
                     document.getElementById('id_selected_features').value = [...new_selection].join(',');
                     highlightFeatures();
                 }
