@@ -45,4 +45,7 @@ def get_all_features(url, token, where="1=1"):
 def get_token():
     user = User.objects.get(username=settings.TASK_RUNNER_AGOL_USER)
     social = user.social_auth.get(provider='agol')
-    return social.get_access_token(load_strategy())
+    token = social.get_access_token(load_strategy())
+    if token is None:
+        raise Exception('AGOL Token expired')
+    return token
