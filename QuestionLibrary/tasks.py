@@ -150,7 +150,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                             else:
                                 v_decoded = v
                         except ObjectDoesNotExist:
-                            v_decoded = None
+                            v_decoded = v
                         assessment_responses.append({
                             'question': master_questions[k].question,
                             'response': v,
@@ -184,9 +184,9 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                     adds.append(response)
 
             data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-            r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits",
-                              params={'token': token, 'f': 'json'},
-                              data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+            # r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits",
+            #                   params={'token': token, 'f': 'json'},
+            #                   data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
             if 'error' in r.json():
                 logger.exception(response_features)
     except Exception as e:
