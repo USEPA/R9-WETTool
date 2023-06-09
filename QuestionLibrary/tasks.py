@@ -146,7 +146,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                         master_question = master_questions[k]
                         try:
                             if master_question.lookup is not None:
-                                v_decoded = master_question.lookup.lookups.get(label=v).description
+                                v_decoded = master_question.lookup.lookups.get(label=v).label
                             else:
                                 v_decoded = v
                         except ObjectDoesNotExist:
