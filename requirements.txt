@@ -1,5 +1,5 @@
-django>=3.2,<3.2.99
-mssql-django
+django>=3.1,<3.2
+mssql-django==1.1.2
 pandas
 openpyxl
 xlrd==1.2.0
