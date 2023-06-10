@@ -20,11 +20,10 @@ from QuestionLibrary.views import EsriProxy, webhook
 admin.site.site_header = 'WET Tool'
 
 urlpatterns = [
-    path(f'{settings.URL_PREFIX}', admin.site.urls),
     path(f'{settings.URL_PREFIX}webhook/', webhook),
     path(f'{settings.URL_PREFIX}oauth2/', include('social_django.urls', namespace='social_django')),
     path(f'{settings.URL_PREFIX}proxy/', EsriProxy.as_view()),
-
+    path(f'{settings.URL_PREFIX}', admin.site.urls),
 ]
 
 if settings.DEBUG:
