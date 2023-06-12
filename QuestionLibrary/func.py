@@ -1,8 +1,9 @@
 import requests
 from django.conf import settings
 from django.contrib.auth.models import User
+from pandas import DataFrame
 from social_django.utils import load_strategy
-
+from numpy import nan as not_a_number
 
 class TokenExpired(Exception):
     pass
@@ -49,3 +50,30 @@ def get_token():
     if token is None:
         raise Exception('AGOL Token expired')
     return token
+
+def get_latest_assessment_responses(group_by_field, assessment_responses, survey_base_map_service, table, token):
+    group_by_fields = ['question', group_by_field]
+    adds, updates = [], []
+    if len(assessment_responses) > 0:
+        assessment_responses_df = DataFrame(assessment_responses)
+        assessment_responses_df = assessment_responses_df.loc[
+                                  assessment_responses_df.groupby(group_by_fields,
+                                                                  dropna=False).EditDate.idxmax(), :]
+        assessment_responses_df = assessment_responses_df.replace({not_a_number: None})
+        assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
+        # loop through assessment questions and check if they need to be added or updated in base service
+        for response in assessment_responses:
+            # only looking at system id or facility id so facility id has to be unique across datasets... switch to actual PK for this?
+            # but likelihood of same question for same fac id at this point is very low
+            where = f"question='{response['attributes']['question']}' AND {group_by_field}='{response['attributes'][group_by_field]}'"
+            r = requests.get(f"{survey_base_map_service}/{table['id']}/query",
+                             params={'where': where, 'token': token, 'f': 'json', 'outFields': '*'})
+            features = r.json()['features']
+            if len(features) == 1:
+                for k, v in response['attributes'].items():
+                    features[0]['attributes'][k] = v
+                updates.append(features[0])
+            else:
+                adds.append(response)
+
+    return adds, updates

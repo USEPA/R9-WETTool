@@ -5,7 +5,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from pandas import DataFrame
 
-from QuestionLibrary.func import formattedFieldName, get_all_features, TokenExpired, get_token
+from QuestionLibrary.func import formattedFieldName, get_all_features, TokenExpired, get_token, \
+    get_latest_assessment_responses
 from QuestionLibrary.models import Survey, MasterQuestion
 import json
 import requests
@@ -159,36 +160,22 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                             'display_name': v_decoded,
                             'EditDate': response_feature['attributes']['EditDate']
                         })
+        pre_grouped_assessments = {
+            'facility_id': [x for x in assessment_responses if x['facility_id'] is not None],
+            'system_id': [x for x in assessment_responses if x['facility_id'] is None]
+        }
+        updates, adds = [], []
+        for field, assessment_responses in pre_grouped_assessments.items():
+            a, u = get_latest_assessment_responses(field, assessment_responses, survey_base_map_service, table, token)
+            adds += a
+            updates += u
 
-        if len(assessment_responses) > 0:
-            assessment_responses_df = DataFrame(assessment_responses)
-            assessment_responses_df = assessment_responses_df.loc[
-                                      assessment_responses_df.groupby(['question', 'system_id', 'facility_id'],
-                                                                      dropna=False).EditDate.idxmax(), :]
-            assessment_responses_df = assessment_responses_df.replace({np.nan: None})
-            assessment_responses = [{'attributes': x} for x in assessment_responses_df.to_dict('records')]
-            # loop through assessment questions and check if they need to be added or updated in base service
-            updates, adds = [], []
-            for response in assessment_responses:
-                where = f"question='{response['attributes']['question']}' AND system_id='{response['attributes']['system_id']}'"
-                if response['attributes']['facility_id'] is not None:
-                    where += f" AND facility_id='{response['attributes']['facility_id']}'"
-                r = requests.get(f"{survey_base_map_service}/{table['id']}/query",
-                                 params={'where': where, 'token': token, 'f': 'json', 'outFields': '*'})
-                features = r.json()['features']
-                if len(features) == 1:
-                    for k, v in response['attributes'].items():
-                        features[0]['attributes'][k] = v
-                    updates.append(features[0])
-                else:
-                    adds.append(response)
-
-            data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-            r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits",
-                              params={'token': token, 'f': 'json'},
-                              data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
-            if 'error' in r.json():
-                logger.exception(response_features)
+        data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
+        r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits",
+                          params={'token': token, 'f': 'json'},
+                          data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
+        if 'error' in r.json():
+            logger.exception(response_features)
     except Exception as e:
         logger.exception(response_features)
         raise e

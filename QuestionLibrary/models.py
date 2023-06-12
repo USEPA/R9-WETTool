@@ -531,13 +531,15 @@ class QuestionList(models.Model):
 
             ]
 
-        return [{
+        q = [{
             'type': self.question.formatted_survey_field_type.lower(),
             'name': self.question.formatted_survey_field_name,
             'label': self.question.question,
             'relevant': f"{self.question.formatted_survey_category_field_relevant(layer_index)}",
             'required': f"{self.question.formatted_survey_category_field_relevant(layer_index)} and {self.get_formatted_required()}",
         }]
+
+        return q
 
 
 class SurveyResponse(models.Model):
