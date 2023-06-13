@@ -164,9 +164,13 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
             'facility_id': [x for x in assessment_responses if x['facility_id'] is not None],
             'system_id': [x for x in assessment_responses if x['facility_id'] is None]
         }
+        captured_responses = {
+            'facility_id': get_all_features(f"{survey_base_map_service}/{table['id']}", token, "facility_id is not null"),
+            'system_id': get_all_features(f"{survey_base_map_service}/{table['id']}", token, "facility_id is null")
+        }
         updates, adds = [], []
         for field, assessment_responses in pre_grouped_assessments.items():
-            a, u = get_latest_assessment_responses(field, assessment_responses, survey_base_map_service, table, token)
+            a, u = get_latest_assessment_responses(field, assessment_responses, captured_responses[field])
             adds += a
             updates += u
 

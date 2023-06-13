@@ -51,7 +51,7 @@ def get_token():
         raise Exception('AGOL Token expired')
     return token
 
-def get_latest_assessment_responses(group_by_field, assessment_responses, survey_base_map_service, table, token):
+def get_latest_assessment_responses(group_by_field, assessment_responses, current_responses):
     group_by_fields = ['question', group_by_field]
     adds, updates = [], []
     if len(assessment_responses) > 0:
@@ -65,10 +65,10 @@ def get_latest_assessment_responses(group_by_field, assessment_responses, survey
         for response in assessment_responses:
             # only looking at system id or facility id so facility id has to be unique across datasets... switch to actual PK for this?
             # but likelihood of same question for same fac id at this point is very low
-            where = f"question='{response['attributes']['question']}' AND {group_by_field}='{response['attributes'][group_by_field]}'"
-            r = requests.get(f"{survey_base_map_service}/{table['id']}/query",
-                             params={'where': where, 'token': token, 'f': 'json', 'outFields': '*'})
-            features = r.json()['features']
+            features = list(filter(
+                lambda f: f['attributes']['question'] == response['attributes']['question'] and f['attributes'][group_by_field] == response['attributes'][group_by_field],
+                current_responses['features']
+            ))
             if len(features) == 1:
                 for k, v in response['attributes'].items():
                     features[0]['attributes'][k] = v
