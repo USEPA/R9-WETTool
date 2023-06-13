@@ -50,8 +50,10 @@ def load_selected_records_action(modeladmin, request, queryset):
     token = social.get_access_token(load_strategy())
 
     for obj in queryset:
-        pipe = get_features_to_load.message(obj.pk, token) | load_surveys.message(obj.survey123_service, token)
-        pipe.run()
+        pipeline([
+            get_features_to_load.message(obj.pk, token),
+            load_surveys.message(obj.survey123_service, token)
+        ]).run()
         messages.success(request, 'Loading selected records into survey')
 
 
