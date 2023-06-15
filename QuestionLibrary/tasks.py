@@ -136,7 +136,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                                 'response': v,
                                 'units': units,
                                 'facility_id': fac_id,
-                                'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
+                                'system_id': response_feature['attributes'].get('layer_0_pws_fac_id', None),
                                 'EditDate': get_edit_date(response_feature, eventType, received_timestamp),
                                 'display_name': f"{v} {units}"
                             })
@@ -156,7 +156,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                             'question': master_questions[k].question,
                             'response': v,
                             'facility_id': fac_id,
-                            'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
+                            'system_id': response_feature['attributes'].get('layer_0_pws_fac_id', None),
                             'display_name': v_decoded,
                             'EditDate': get_edit_date(response_feature, eventType, received_timestamp)
                         })
