@@ -6,7 +6,7 @@ from django.db import transaction
 from pandas import DataFrame
 
 from QuestionLibrary.func import formattedFieldName, get_all_features, TokenExpired, get_token, \
-    get_latest_assessment_responses
+    get_latest_assessment_responses, get_edit_date
 from QuestionLibrary.models import Survey, MasterQuestion
 import json
 import requests
@@ -103,7 +103,7 @@ def process_response_features(survey_base_map_service, survey_service_config, su
 
 
 @actor()
-def load_responses(survey_base_map_service, survey_service_config, survey_assessment_layer, token, response_features):
+def load_responses(survey_base_map_service, survey_service_config, survey_assessment_layer, token, eventType, received_timestamp, response_features):
     try:
         token = get_token() # override for now
         # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
@@ -137,7 +137,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                                 'units': units,
                                 'facility_id': fac_id,
                                 'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
-                                'EditDate': response_feature['attributes']['EditDate'],
+                                'EditDate': get_edit_date(response_feature, eventType, received_timestamp),
                                 'display_name': f"{v} {units}"
                             })
                     elif k.endswith('_choices'):
@@ -158,7 +158,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                             'facility_id': fac_id,
                             'system_id': response_feature['attributes']['layer_0_pws_fac_id'],
                             'display_name': v_decoded,
-                            'EditDate': response_feature['attributes']['EditDate']
+                            'EditDate': get_edit_date(response_feature, eventType, received_timestamp)
                         })
         pre_grouped_assessments = {
             'facility_id': [x for x in assessment_responses if x['facility_id'] is not None],

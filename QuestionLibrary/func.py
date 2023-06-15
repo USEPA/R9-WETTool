@@ -77,3 +77,11 @@ def get_latest_assessment_responses(group_by_field, assessment_responses, curren
                 adds.append(response)
 
     return adds, updates
+
+
+# addData event does not include editor tracking fields sometimes?
+def get_edit_date(feature, eventType, received_timestamp):
+    if eventType == 'editData':
+        # todo: check payload detail to determine correct edit date field
+        return feature['attributes']['EditDate']
+    return received_timestamp

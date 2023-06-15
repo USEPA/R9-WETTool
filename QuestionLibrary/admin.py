@@ -23,7 +23,7 @@ def load_selected_responses(modeladmin, request, queryset):
         pipeline([
             get_submitted_responses.message(survey.survey123_service, token),
             process_response_features.message(survey.base_map_service, survey.service_config, survey.layer, token, 'editData'),
-            load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer, token)
+            load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer, token, 'editData', None)
         ]).run()
 
         messages.success(request, 'Loading latest responses')

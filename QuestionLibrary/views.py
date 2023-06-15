@@ -17,8 +17,7 @@ import json
 from social_django.utils import load_strategy
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render
-from django.core.exceptions import ObjectDoesNotExist
+from datetime import datetime
 import logging
 logger = logging.getLogger('django')
 
@@ -98,14 +97,14 @@ def webhook(request):
 
         survey = Survey.objects.get(survey123_service=payload['surveyInfo']['serviceUrl'])
 
-
+        received_timestamp = int(datetime.utcnow().timestamp() * 1000)
         pipeline([
             set_survey_to_submitted.message(payload),
             process_response_features.message_with_options(args=(survey.base_map_service, survey.service_config, survey.layer,
                                               payload['portalInfo']['token'], payload['eventType'],
                                               [payload['feature']]), pipe_ignore=True),
             load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer,
-                                   payload['portalInfo']['token'])
+                                   payload['portalInfo']['token'], payload['eventType'], received_timestamp)
         ]).run()
 
         # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
