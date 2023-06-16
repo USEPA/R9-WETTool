@@ -82,9 +82,14 @@ def process_response_features(survey_base_map_service, survey_service_config, su
                 if layer['id'] == int(survey_layer):
                     f['geometry'] = response_feature.get('geometry', None)
                 features.append(f)
-            data = {'adds' if eventType == 'addData' else
-                    ('updates' if eventType == 'editData' else None): json.dumps(features)}
 
+            # if the layer being updated is the selected survey layer then allow adds
+            # otherwise only allow updates b/c there should be no way of adding things
+            if layer['id'] == int(survey_layer):
+                data = {'adds' if eventType == 'addData' else
+                        ('updates' if eventType == 'editData' else None): json.dumps(features)}
+            else:
+                data = {'updates': json.dumps(features)}
             # todo: for updates look for existing record and copy to history table
             # ignore eventType and always check?? based on what? if someone can enter then what happens...
             # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
