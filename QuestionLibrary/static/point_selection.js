@@ -159,7 +159,7 @@
                 }
 
                 function getFeatures(featureLayer) {
-                    featureLayer.queryFeatures({"where": "1=1", "outFields": "*"}).then(function (featureSet) {
+                    featureLayer.queryFeatures({"where": "include=1", "outFields": "*"}).then(function (featureSet) {
                         // todo: deal with getting more features if max returned
                         allFeatures = allFeatures.concat(featureSet.features);
                         var features = featureSet.features.map(f => f.attributes);
