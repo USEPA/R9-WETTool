@@ -3,8 +3,8 @@ mssql-django==1.1.2
 pandas
 openpyxl
 xlrd==1.2.0
-django-cors-headers
-git+https://github.com/Innovate-Inc/django-agol-oauth2.git@master#egg=django-agol-oauth2==0.0.3
+django-cors-headers==3.11.0
+git+https://github.com/Innovate-Inc/django-agol-oauth2.git@master#egg=django-agol-oauth2
 django-debug-toolbar
 django-modeladmin-reorder
 django-fieldsets-with-inlines

@@ -1,5 +1,6 @@
 from django.contrib import admin, sites
 from django.http import HttpResponse
+from django.utils.timezone import now
 from dramatiq import pipeline
 
 from .models import *
@@ -22,13 +23,15 @@ def load_selected_responses(modeladmin, request, queryset):
 
         pipeline([
             get_submitted_responses.message(survey.survey123_service, token),
-            process_response_features.message(survey.base_map_service, survey.service_config, survey.layer, token, 'editData'),
-            load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer, token, 'editData', None)
+            process_response_features.message(survey.map_service_url, survey.epa_response.map_service_config, survey.layer, token, 'editData'),
+            load_responses.message(survey.map_service_url, survey.epa_response.map_service_config, survey.assessment_layer, token, 'editData', None)
         ]).run()
 
         messages.success(request, 'Loading latest responses')
 
+
 load_selected_responses.short_description = 'Get latest submitted responses from survey'
+
 
 def download_xls_action(modeladmin, request, queryset):
     for obj in queryset:
@@ -39,7 +42,6 @@ def download_xls_action(modeladmin, request, queryset):
         response['Content-Disposition'] = f'attachment; filename=survey_config_service_{obj.name}.xlsx'
         # messages.success(request, 'Download Successful')
         return response
-
 
 
 download_xls_action.short_description = 'Download Survey123 Service Configuration'
@@ -59,6 +61,73 @@ def load_selected_records_action(modeladmin, request, queryset):
 
 load_selected_records_action.short_description = 'Load Selected Records to Survey123'
 
+
+def disable_epa_response_action(modeladmin, request, queryset):
+    queryset.update(disabled_date=now())
+
+
+disable_epa_response_action.short_description = 'Disable selected EPA Responses'
+
+
+def enable_epa_response_action(modeladmin, request, queryset):
+    queryset.update(disabled_date=None)
+
+
+enable_epa_response_action.short_description = 'Enable selected EPA Responses'
+
+
+class SurveyInline(admin.TabularInline):
+    model = Survey
+    fields = ['name', 'survey123_service']
+    show_change_link = True
+    extra = 0
+
+    # def has_change_permission(self, request, obj=None):
+    #     return False
+
+    def get_readonly_fields(self, request, obj=None):
+        return list(super().get_fields(request, obj))
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class EPAResponseForm(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(EPAResponseForm, self).__init__(*args, **kwargs)
+        # turn the layer id fields into dropdowns populated with the layers in base service config JSON
+        # field labels as defined in the model would be overwritten, so we copy those to the new dropdown fields
+        if self.instance.map_service_config is not None:
+            self.fields['system_layer_id'] = forms.ChoiceField(choices=self.instance.get_layers_as_choices(),
+                                                               label=self.fields['system_layer_id'].label)
+            self.fields['facility_layer_id'] = forms.ChoiceField(choices=self.instance.get_layers_as_choices(),
+                                                                 label=self.fields['facility_layer_id'].label)
+
+    #  todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
+
+
+@admin.register(EPAResponse)
+class EPAResponseAdmin(admin.ModelAdmin):
+    inlines = [SurveyInline]
+    actions = [disable_epa_response_action, enable_epa_response_action]
+    readonly_fields = ['status']
+    exclude = ['disabled_date']
+    list_display = ['name', 'status']
+    search_fields = ['name']
+    form = EPAResponseForm
+
+    def status(self, obj=None):
+        if obj.disabled_date is None:
+            return 'Active'
+        else:
+            return f'Disabled {obj.disabled_date.strftime("%Y-%m-%d")}'
+
+    def save_model(self, request, obj, form, change):
+        if 'map_service_url' in form.changed_data:
+            obj.get_map_service(request.user)
+        super().save_model(request, obj, form, change)
+
+
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
     list_display = ['label', 'description']
@@ -72,6 +141,7 @@ class FacilityTypeAdmin(admin.ModelAdmin):
     list_filter = ['category', 'facility_type']
     pass
 
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['label', 'media']
@@ -79,14 +149,13 @@ class CategoryAdmin(admin.ModelAdmin):
     pass
 
 
-@admin.register(ResponseType)
-class ResponseTypeAdmin(admin.ModelAdmin):
+@admin.register(Survey123FieldType)
+class Survey123FieldTypeAdmin(admin.ModelAdmin):
     pass
 
 
-
-@admin.register(FeatureServiceResponse)
-class FeatureServiceResponseAdmin(admin.ModelAdmin):
+@admin.register(ESRIFieldTypes)
+class ESRIFieldTypesAdmin(admin.ModelAdmin):
     pass
 
 
@@ -121,21 +190,21 @@ class QuestionFieldVal(ModelForm):
             # if categories_queryset.count() > 0:
             #     self.fields['category'].required = True
 
-        # response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'response_type', None)
+        # survey123_field_type = self.cleaned_data['survey123_field_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'survey123_field_type', None)
         # # lookup = self.cleaned_data['lookup'] if hasattr(self, 'cleaned_data') else getattr(self.instance, 'lookup', None)
-        # if response_type is not None:
+        # if survey123_field_type is not None:
         #     self.fields['lookup'].required = False
-        #     if response_type.label == 'select_one':
+        #     if survey123_field_type.label == 'select_one':
         #         self.fields['lookup'].required = True
 
     def clean_lookup(self):
-        response_type = self.cleaned_data['response_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance,
-                                                                                                         'response_type',
-                                                                                                         None)
+        survey123_field_type = self.cleaned_data['survey123_field_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance,
+                                                                                                                       'survey123_field_type',
+                                                                                                                       None)
 
-        if response_type.label == 'select_one':
+        if survey123_field_type.label == 'select_one':
             if self.cleaned_data['lookup'] is None:
-                raise ValidationError('Lookup required if Response Type is select_one.')
+                raise ValidationError('Lookup required if Field Type is select_one.')
         return self.cleaned_data.get('lookup', None)
 
     def clean_category(self):
@@ -161,22 +230,20 @@ class QuestionFieldVal(ModelForm):
 
         # return self.cleaned_data.get('category', None)
 
-
-class Meta:
-    model = MasterQuestion
-    exclude = []
+    class Meta:
+        model = MasterQuestion
+        exclude = []
 
 
 class RelatedQuestionInlineForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(RelatedQuestionInlineForm, self).__init__(*args, **kwargs)
-        #filter the related question somehow to improve performance?
-        #this obviously doesn't work since we are trying to set related questions.
+        # filter the related question somehow to improve performance?
+        # this obviously doesn't work since we are trying to set related questions.
         # self.fields['related'].queryset = RelatedQuestionList.objects.all().prefetch_related('related')
 
         if self.instance.question_id is not None:
             self.fields['relevant_field'].queryset = Lookup.objects.filter(group=self.instance.question.lookup)
-
 
     class Meta:
         widgets = {
@@ -203,33 +270,37 @@ class RelatedQuestionListAdmin(admin.ModelAdmin):
 
 @admin.register(MasterQuestion)
 class MasterQuestionAdmin(admin.ModelAdmin):
+    # Question List
     form = QuestionFieldVal
     inlines = [MasterQuestionRelatedQuestionInline]
     list_filter = ['media', 'category', 'facility_type']
     search_fields = ['question']
     list_display = ['question', 'media', 'category', 'facility_type']
     ordering = ['question']
-    fields = ['question', 'media', 'category', 'facility_type', 'response_type', 'lookup', 'default_unit']
+    fields = ['question', 'media', 'category', 'facility_type', 'survey123_field_type', 'lookup', 'default_unit']
 
 
 class SurveyAdminForm(ModelForm):
     selected_features = CharField(widget=HiddenInput(), required=False)
 
-    # define an init here
-    layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
-    assessment_layer = forms.ChoiceField(choices=[], label='Response Layer', required=False)
+    # layer = forms.ChoiceField(choices=[], label='Feature Layer', required=False)
+    # assessment_layer = forms.ChoiceField(choices=[], label='Survey Response Layer', required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance.service_config is not None:
-            config = json.loads(self.instance.service_config)
+        if self.instance.epa_response and self.instance.epa_response.map_service_config is not None:
+            self.fields['layer'] = forms.ChoiceField(choices=self.instance.epa_response.get_layers_as_choices(),
+                                                     label=self.fields['layer'].label)
+            self.fields['assessment_layer'] = forms.ChoiceField(choices=self.instance.epa_response.get_tables_as_choices(),
+                                                                label=self.fields['assessment_layer'].label)
 
-            if type(config) is dict:
-                layer_choice = [(x['id'], x['name']) for x in config['layers']]
-                self.fields['layer'].choices = layer_choice
-
-                layer_choice = [(x['id'], x['name']) for x in config['tables']]
-                self.fields['assessment_layer'].choices = layer_choice
+            # config = json.loads(self.instance.epa_response.map_service_config)
+            # if type(config) is dict:
+            #     layer_choice = [(x['id'], x['name']) for x in config['layers']]
+            #     self.fields['layer'].choices = layer_choice
+            #
+            #     layer_choice = [(x['id'], x['name']) for x in config['tables']]
+            #     self.fields['assessment_layer'].choices = layer_choice
 
     class Meta:
         model = Survey
@@ -246,20 +317,24 @@ class SurveyAdmin(admin.ModelAdmin):
     inlines = [SurveyQuestionInline]
 
     form = SurveyAdminForm
-    list_display = ['name', 'base_service_ready', 'survey_service_ready']
+    list_display = ['name', 'epa_response', 'base_service_ready', 'survey_service_ready']
 
-    fields = ['name', 'base_map_service', 'layer', 'assessment_layer', 'survey123_service', 'selected_features']
+    fields = ['name', 'epa_response', 'layer', 'assessment_layer', 'survey123_service', 'selected_features', '_base_map_service_url']
+    search_fields = ['name']
+    autocomplete_fields = ['epa_response']
     actions = [download_xls_action, load_selected_records_action, load_selected_responses]
+    readonly_fields = ['_base_map_service_url']
 
-    def save_model(self, request, obj, form, change):
-        # obj.user = request.user
-        obj.getMapService(request.user)
-        # obj.getBaseAttributes(request.user)
-        super().save_model(request, obj, form, change)
-
-
-# todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
-
+    def _base_map_service_url(self, obj):
+        # the javascript map needs this to use the base map service
+        if obj.epa_response is None or obj.epa_response.map_service_config is None:
+            return 'Error: Select an EPA response with valid map service config'
+            # raise ValidationError(_('Error: Select an EPA response with valid map service config', code="Invalid"))
+        else:
+            return format_html(
+                '<span id="id_base_service_url">{}</span>',
+                mark_safe(obj.epa_response.map_service_url)
+            )
 
 class QuestionSetInlineForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -312,7 +387,9 @@ def approve_dashboard(modeladmin, request, queryset):
 
         messages.success(request, 'Approving dashboard')
 
+
 approve_dashboard.short_description = 'Approve selected dashboard(s)'
+
 
 @admin.register(Dashboard)
 class DashboardAdmin(admin.ModelAdmin):

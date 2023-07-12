@@ -100,15 +100,15 @@ def webhook(request):
         received_timestamp = int(datetime.utcnow().timestamp() * 1000)
         pipeline([
             set_survey_to_submitted.message(payload),
-            process_response_features.message_with_options(args=(survey.base_map_service, survey.service_config, survey.layer,
-                                              payload['portalInfo']['token'], payload['eventType'],
-                                              [payload['feature']]), pipe_ignore=True),
-            load_responses.message(survey.base_map_service, survey.service_config, survey.assessment_layer,
+            process_response_features.message_with_options(args=(survey.map_service_url, survey.map_service_config, survey.layer,
+                                                                 payload['portalInfo']['token'], payload['eventType'],
+                                                                 [payload['feature']]), pipe_ignore=True),
+            load_responses.message(survey.map_service_url, survey.map_service_config, survey.assessment_layer,
                                    payload['portalInfo']['token'], payload['eventType'], received_timestamp)
         ]).run()
 
         # loop through the edited data and grab the attributes & geometries while scrubbing the base_ prefix off of the fields
-        # base_service_config = json.loads(survey.service_config)['layers']
+        # base_service_config = json.loads(survey.map_service_config)['layers']
         # # todo: deal with new features and how that affects creating records in related tables
         # for layer in base_service_config:
         #     layer_prefix = f"layer_{layer['id']}_"
@@ -128,11 +128,11 @@ def webhook(request):
         #
         #     # todo: for updates look for existing record and copy to history table
         #
-        #     response = requests.post(f"{survey.base_map_service}/{layer['id']}/applyEdits",
+        #     response = requests.post(f"{survey.map_service_url}/{layer['id']}/applyEdits",
         #                              params={'token': token, 'f': 'json'},
         #                              data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
         #
-        # table = next(x for x in json.loads(survey.service_config)['tables'] if x['id'] == int(survey.assessment_layer))
+        # table = next(x for x in json.loads(survey.map_service_config)['tables'] if x['id'] == int(survey.assessment_layer))
         # fac_id = None
         # if fac_id is None and payload['feature']['attributes'].get('layer_1_FacilityID') is not None:
         #    fac_id = payload['feature']['attributes']['layer_1_FacilityID']
@@ -173,7 +173,7 @@ def webhook(request):
         #             }})
         #
         # data = {'adds': json.dumps(assessment_responses)}
-        # requests.post(f"{survey.base_map_service}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
+        # requests.post(f"{survey.map_service_url}/{table['id']}/applyEdits", params={'token': token, 'f': 'json'},
         #               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
 
         return HttpResponse("Ok")

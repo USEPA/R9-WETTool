@@ -122,7 +122,7 @@ XLS_FORM_TEMPLATE = 'survey123_template.xlsx'
 
 SOCIAL_AUTH_AGOL_KEY = getattr(local_settings, 'SOCIAL_AUTH_AGOL_KEY', '')
 SOCIAL_AUTH_AGOL_SECRET = getattr(local_settings, 'SOCIAL_AUTH_AGOL_SECRET', '')
-SOCIAL_AUTH_AGOL_DOMAIN = 'epa.maps.arcgis.com'
+SOCIAL_AUTH_AGOL_DOMAIN = getattr(local_settings, 'SOCIAL_AUTH_AGOL_DOMAIN', '')
 
 SOCIAL_AUTH_PIPELINE = [  # Note: Sequence of functions matters here.
     'social_core.pipeline.social_auth.social_details',  # 0
@@ -145,12 +145,10 @@ MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 URL_PREFIX = getattr(local_settings, 'URL_PREFIX', '')
 
 LOGIN_REDIRECT_URL = f'/{URL_PREFIX}'
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-
-
 STATIC_URL = f'/{URL_PREFIX}static/'
-
 STATIC_ROOT = 'static'
 
 CORS_ORIGIN_ALLOW_ALL = True  # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
@@ -171,15 +169,16 @@ ADMIN_REORDER = (
         {'model': 'social_django.Nonce', 'label': 'Nonces'},
     )},
     {'app': 'QuestionLibrary', 'models': (
+        {'model': 'QuestionLibrary.EPAResponse', 'label': 'EPA Responses'},
+        {'model': 'QuestionLibrary.Survey', 'label': 'Assessments'},
         {'model': 'QuestionLibrary.Media', 'label': 'Media'},
         {'model': 'QuestionLibrary.Category', 'label': 'Category'},
         {'model': 'QuestionLibrary.FacilityType', 'label': 'Facility Type'},
         {'model': 'QuestionLibrary.MasterQuestion', 'label': 'Question List'},
         {'model': 'QuestionLibrary.QuestionSet', 'label': 'Question Sets'},
-        {'model': 'QuestionLibrary.Survey', 'label': 'Assessments'},
+        {'model': 'QuestionLibrary.LookupGroup', 'label': 'Question Response Groups'},
         {'model': 'QuestionLibrary.Dashboard', 'label': 'Dashboards'},
-        {'model': 'QuestionLibrary.LookupGroup', 'label': 'Response Types'},
-        {'model': 'QuestionLibrary.FeatureServiceResponse', 'label': 'Feature Service/Survey123 Field Mappings'},
+        {'model': 'QuestionLibrary.ESRIFieldTypes', 'label': 'Feature Service/Survey123 Field Mappings'},
     )},
 )
 
@@ -192,6 +191,9 @@ LOGGING['handlers']['slack'] = {
     'bot_token': getattr(local_settings, 'SLACK_BOT_TOKEN', ''),
     'channel_id': getattr(local_settings, 'SLACK_CHANNEL', '')
 }
+LOGGING['handlers']['console'] = {'level': 'DEBUG',
+                                  'filters': ['require_debug_true'],
+                                  'class': 'logging.StreamHandler'}
 LOGGING['handlers']['file'] = {'level': 'ERROR',
                                'filters': ['require_debug_false'],
                                'class': 'logging.FileHandler',

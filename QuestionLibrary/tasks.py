@@ -212,7 +212,7 @@ def get_features_to_load(survey_pk, token):
     token = get_token()  # override for now
     survey = Survey.objects.get(pk=survey_pk)
     features = []
-    service_config_layers = json.loads(survey.service_config)['layers']
+    service_config_layers = json.loads(survey.map_service_config)['layers']
     # get layers that serve a origin in relationship
     # origin_layers = [x for x in service_config_layers if
     #                  x['id'] = survey.layer]
@@ -243,7 +243,7 @@ def get_features_to_load(survey_pk, token):
 
             params = {'token': token,
                       'f': 'json'}
-            q = requests.post(url=survey.base_map_service + '/' + str(survey.layer) + '/query',
+            q = requests.post(url=survey.map_service_url + '/' + str(survey.layer) + '/query',
                               params=params, data=data)
             layer_name = origin_layer['name']
 
@@ -259,7 +259,7 @@ def get_features_to_load(survey_pk, token):
                 params = {'token': token,
                           'f': 'json'}
                 related_responses[related_layer['id']] = requests.post(
-                    url=survey.base_map_service + '/' + str(survey.layer) + '/queryRelatedRecords',
+                    url=survey.map_service_url + '/' + str(survey.layer) + '/queryRelatedRecords',
                     params=params, data=data)
 
                 # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time

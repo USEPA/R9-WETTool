@@ -9,7 +9,8 @@ import re
 from django.utils.safestring import mark_safe
 from social_django.utils import load_strategy
 from django.contrib.auth.models import User
-import requests, json
+import requests
+import json
 from urllib.parse import urlencode
 from itertools import islice
 from django.core.exceptions import ValidationError
@@ -17,7 +18,7 @@ import csv
 from django.utils.html import format_html
 import uuid
 
-from QuestionLibrary.func import formattedFieldName
+from QuestionLibrary.func import formattedFieldName, get_service_config
 
 
 class LookupAbstract(models.Model):
@@ -37,13 +38,15 @@ class LookupAbstract(models.Model):
 
 
 class LookupGroup(LookupAbstract):
+    # group of answer choices (Answer Type) for a survey question
     pass
 
     class Meta:
-        verbose_name = "Response Type"
+        verbose_name = "Answer Choices"
 
 
 class Lookup(LookupAbstract):
+    # individual answer choice (question response)
     group = models.ForeignKey('LookupGroup', on_delete=models.CASCADE, related_name='lookups')
 
 
@@ -56,6 +59,38 @@ class Media(LookupAbstract):
 # # todo: if this is to be more generic then Water should not be used here... SubType perhaps is better?
 # class FacilitySubType(LookupAbstract):
 #     pass
+
+
+class EPAResponse(models.Model):
+    name = models.CharField(max_length=150, help_text='EPA Response Name', null=True)
+    map_service_url = models.URLField(verbose_name='Base Map Service', null=True,
+                                      help_text='Enter a valid service URL, then click "save and continue editing" to get the service config.')
+    # store the JSON service config from the service locally for reference in forms
+    map_service_config = models.TextField(null=True, blank=True)
+    system_layer_id = models.IntegerField(verbose_name='System Layer', null=True, default=0)
+    facility_layer_id = models.IntegerField(verbose_name='Facility Layer', null=True, default=1)
+    disabled_date = models.DateTimeField(null=True, blank=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def get_map_service(self, user):
+        if self.map_service_url is not None:
+            self.map_service_config = get_service_config(user=user, service=self.map_service_url)
+
+    def get_layers_as_choices(self):
+        config = json.loads(self.map_service_config)
+        return [(layer['id'], layer['name']) for layer in config['layers']]
+
+    def get_tables_as_choices(self):
+        config = json.loads(self.map_service_config)
+        return [(table['id'], table['name']) for table in config['tables']]
+
+    class Meta:
+        verbose_name = "EPA Response"
+
+    def __str__(self):
+        return self.name
 
 
 class FacilityType(models.Model):
@@ -72,34 +107,29 @@ class FacilityType(models.Model):
 class Category(LookupAbstract):
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
 
-    # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
-    # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
     class Meta:
         verbose_name = 'Category'
         verbose_name_plural = 'Categories'
 
 
 # todo: more closely link this with survey123.  Maybe allow input of the cross walk so its configurable and dynamic
-
-class ResponseType(LookupAbstract):
-    pass
-
-    survey123_field_type = models.CharField(max_length=50)
+class Survey123FieldType(LookupAbstract):
+    field_type = models.CharField(max_length=50)
 
     class Meta:
-        verbose_name = "ESRI Response Type"
+        verbose_name = "Survey123 Field Type"
 
 
 class Unit(LookupAbstract):
     pass
 
 
-class FeatureServiceResponse(models.Model):
-    fs_response_type = models.CharField(max_length=250)
-    esri_field_type = models.CharField(max_length=250)
+class ESRIFieldTypes(models.Model):
+    field_type = models.CharField(max_length=250)
+    data_type = models.CharField(max_length=250)
 
     def __str__(self):
-        return self.fs_response_type
+        return self.field_type
 
 
 class MasterQuestion(models.Model):
@@ -108,14 +138,17 @@ class MasterQuestion(models.Model):
 
     # todo: why is media here and in category
     media = models.ForeignKey('Media', on_delete=models.PROTECT)
-    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True, help_text='Leaving category type empty will apply the question to ALL category types.')
-    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True, help_text='Leaving facility type empty will apply the question to ALL facility types.')
-    response_type = models.ForeignKey('ResponseType', on_delete=models.PROTECT, verbose_name='Survey123 Field Type',)
+    category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True,
+                                 help_text='Leaving category type empty will apply the question to ALL category types.')
+    facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True,
+                                      help_text='Leaving facility type empty will apply the question to ALL facility types.')
+    survey123_field_type = models.ForeignKey('Survey123FieldType', on_delete=models.PROTECT, null=True, blank=True,
+                                             verbose_name='Survey123 Field Type')
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True,
-                               verbose_name='Response Type')
+                               verbose_name='Answer Type')
     # todo: triggers creation of second field for survey generation if not none
     default_unit = models.ForeignKey('Lookup', on_delete=models.PROTECT, null=True, blank=True,
-                                     help_text='To generate a list of default values, select desired response type and click "Save and Continue Editing"')
+                                     help_text='To generate a list of default values, select desired answer type and click "Save and Continue Editing"')
     related_questions = models.ManyToManyField('self', related_name='related_question', through='RelatedQuestionList',
                                                symmetrical=False)
 
@@ -134,12 +167,12 @@ class MasterQuestion(models.Model):
 
     @property
     def formatted_survey_field_type(self):
-        if self.response_type.survey123_field_type == 'select_one':
-            return f"{self.response_type.survey123_field_type} {self.lookup.formatted_survey_name}"
+        if self.survey123_field_type.field_type == 'select_one':
+            return f"{self.survey123_field_type.field_type} {self.lookup.formatted_survey_name}"
         # could add more here but nothing useful I can see right now
         # values = {'list_name': self.lookup.formatted_survey_name}
-        # return self.response_type.survey123_field_type.format(**values)
-        return self.response_type.survey123_field_type
+        # return self.survey123_field_type.field_type.format(**values)
+        return self.survey123_field_type.field_type
 
     @property
     def formatted_survey_field_name(self):
@@ -153,21 +186,21 @@ class MasterQuestion(models.Model):
     #             print(r.related)
     #             return f"$selected(${r.question}, {r.relevant_field})"
 
-    def formatted_survey_category_field_relevant(self, layer_id):
+    def formatted_survey_category_field_relevant(self, survey, layer_id):
         for r in RelatedQuestionList.objects.filter(related_id__pk=self.id):
             if r is not None:
                 return f"${{layer_{layer_id}_media}}='{self.media.description}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
             if r is not None and self.facility_type is not None and self.media is not None:
                 return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
-        if self.facility_type is not None and self.media is not None and int(layer_id) != 0:
+        if self.facility_type is not None and self.media is not None and int(layer_id) != survey.epa_response.system_layer_id:
             return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
         else:
             return f"${{layer_{layer_id}_media}}='{self.media.description}'"
 
     def relevant_for_feature(self, feature, layer_id):
-        if self.facility_type is not None and self.media is not None and int(layer_id) != 0:
+        if self.facility_type is not None and self.media is not None and int(layer_id) != survey.epa_response.system_layer_id:
             return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description and \
-                   feature['attributes'][f'layer_{layer_id}_Fac_Type'] == self.facility_type.fac_code
+                feature['attributes'][f'layer_{layer_id}_Fac_Type'] == self.facility_type.fac_code
 
         return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description
 
@@ -175,15 +208,16 @@ class MasterQuestion(models.Model):
     def get_formatted_required(self, required):
         return "true" if required else "false"
 
-    def get_formatted_question(self, layer_index, required):
+    def get_formatted_question(self, survey, layer_index, required):
         # must always return a list
-        if self.lookup is not None and self.response_type.survey123_field_type != 'select_one':
-            return [{
-                'type': 'begin_group',
-                'name': self.formatted_survey_field_name,
-                'label': self.question,
-                'relevant': f" {self.formatted_survey_category_field_relevant(layer_index)}",
-            },
+        if self.lookup is not None and self.survey123_field_type.field_type != 'select_one':
+            return [
+                {
+                    'type': 'begin_group',
+                    'name': self.formatted_survey_field_name,
+                    'label': self.question,
+                    'relevant': f" {self.formatted_survey_category_field_relevant(layer_index)}",
+                },
                 {
                     'type': self.formatted_survey_field_type.lower(),
                     'name': f'{self.formatted_survey_field_name}_measure',
@@ -198,15 +232,14 @@ class MasterQuestion(models.Model):
                 {
                     'type': 'end group'
                 }
-
             ]
 
         q = [{
             'type': self.formatted_survey_field_type.lower(),
             'name': self.formatted_survey_field_name,
             'label': self.question,
-            'relevant': f"{self.formatted_survey_category_field_relevant(layer_index)}",
-            'required': f"{self.formatted_survey_category_field_relevant(layer_index)} and {self.get_formatted_required(required)}",
+            'relevant': f"{self.formatted_survey_category_field_relevant(survey, layer_index)}",
+            'required': f"{self.formatted_survey_category_field_relevant(survey, layer_index)} and {self.get_formatted_required(required)}",
         }]
 
         return q
@@ -220,22 +253,20 @@ class Survey(models.Model):
     # todo: determine how to select this and then make fields available for matching to category values
     # perhaps this is a url to a published service?
     # this way the data doesn't even need to be on same machine or network. could even be in agol
-    base_map_service = models.URLField()
     survey123_service = models.URLField(null=True, blank=True)
+    epa_response = models.ForeignKey('EPAResponse', on_delete=models.SET_NULL, null=True, blank=True,
+                                     help_text='Select an EPA response and click "Save and Continue Editing" before proceeding.')
 
     # the querying the service based on extent or values would be much more straight forward
     # todo: limit the results of the data source to only select a subset.  This is for creating preload survey
-
-    # store the fields from the service locally for reference in forms?
-    service_config = models.TextField(null=True, blank=True)
 
     # media = models.ForeignKey('Media', on_delete=models.PROTECT)
     # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT)
     # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
 
     selected_features = models.TextField(null=True, blank=True)
-    layer = models.TextField(null=True, blank=True)
-    assessment_layer = models.TextField(null=True, blank=True)
+    layer = models.IntegerField(null=True, blank=True)  # Feature Layer to collect?
+    assessment_layer = models.IntegerField(null=True, blank=True)  # Survey responses?
 
     # color_code = models.CharField(max_length=6)
 
@@ -243,10 +274,8 @@ class Survey(models.Model):
         return self.name
 
     survey123_translation = {
-
         'name': 'formatted_survey_field_name',
         'label': 'question',
-
     }
 
     def survey_service_ready(self):
@@ -258,7 +287,7 @@ class Survey(models.Model):
     survey_service_ready.short_description = "Valid Survey123 Service"
 
     def base_service_ready(self):
-        if self.base_map_service is not None:
+        if self.epa_response is not None and self.epa_response.map_service_config is not None:
             return True
         return False
 
@@ -276,12 +305,11 @@ class Survey(models.Model):
 
         return assigned_questions
 
-
     # returns the active records of relationship between questionset and actual question
     def format_questions(self, questions):
         formatted_questions = []
         for q, l, r in questions:
-            formatted_questions += q.get_formatted_question(l, r)
+            formatted_questions += q.get_formatted_question(self, l, r)
         return formatted_questions
         #
         # assigned_questions = []
@@ -294,7 +322,7 @@ class Survey(models.Model):
         # return assigned_questions
 
     def get_base_domains(self):
-        config = json.loads(self.service_config)
+        config = json.loads(self.epa_response.map_service_config)
         domains = {}
         for l in config['layers']:
             for f in l['fields']:
@@ -318,23 +346,27 @@ class Survey(models.Model):
         shutil.copy(template, output_survey)
         orig_survey_df = pd.read_excel(output_survey, sheet_name='survey')
         orig_choices_df = pd.read_excel(output_survey, sheet_name='choices')
-        
+
         # assigned_questions = MasterQuestion.objects.filter(question_set__surveys=self)
-        feat_service = json.loads(self.service_config)
+        # feat_service = json.loads(self.epa_response.map_service_config)
         # fields = self.get_formatted_fields()
 
         # fields =[]
         # for x in fields:
 
-        if self.layer == '0':
+        # if self.layer == '0':
+        if self.layer == self.epa_response.system_layer_id:
+            # system (base inventory) layer
             fields = self.get_formatted_survey_fields(self.layer)
         else:
+            # feature layer
             fields = self.get_formatted_fields()
 
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
 
-        if self.layer == '0':
+        # if self.layer == '0':
+        if self.layer == self.epa_response.system_layer_id:
             layer = [{
                 'form_title': self.name,
                 'form_id': '',
@@ -372,8 +404,7 @@ class Survey(models.Model):
 
         choices = self.get_assigned_lookups(questions)
 
-
-        #this should grab domains from base service
+        # this should grab domains from base service
         fs_domains = self.get_base_domains()
         fs_choices = []
         for name, values in fs_domains.items():
@@ -395,39 +426,18 @@ class Survey(models.Model):
             settings_df.to_excel(writer, sheet_name='settings', index=False)
         # return questions_df, choices_df
 
-
-
-    def getLayers(self, service, user):
-        layers = []
-        tables = []
-        social = user.social_auth.get(provider='agol')
-        token = social.get_access_token(load_strategy())
-        r = requests.get(url=service, params={'token': token, 'f': 'json'})
-        for x in r.json()['layers']:
-            q = requests.get(url=service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
-            layers.append(q.json())
-        for x in r.json()['tables']:
-            q = requests.get(url=service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
-            tables.append(q.json())
-
-        self.service_config = json.dumps({"layers": layers, "tables": tables})
-
-    def getMapService(self, user):
-        if not self.service_config:
-            self.getLayers(user=user, service=self.base_map_service)
-
     def getSurveyService(self, user):
-        self.getLayers(user=user, service=self.survey123_service)
+        get_service_config(user=user, service=self.survey123_service)
 
     # returns type and appearance
     def get_base_feature_field_info(self, field):
         if field['domain'] is not None:
             appearance = "" if len(field['domain']['codedValues']) < 5 else "autocomplete"
             return f"select_one {field['domain']['name']}", appearance
-        return FeatureServiceResponse.objects.get(fs_response_type=field['type']).esri_field_type, ""
+        return ESRIFieldTypes.objects.get(field_type=field['type']).data_type, ""
 
     def get_formatted_fields(self):
-        feat_service = json.loads(self.service_config)['layers']
+        feat_service = json.loads(self.epa_response.map_service_config)['layers']
         fields = []
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
                        'last_edited_user', 'last_edited_date', 'OBJECTID'}
@@ -436,6 +446,7 @@ class Survey(models.Model):
         # todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment
 
         for x in feat_service:
+            # system layer
             if x['name'] == 'Base_Inventory':
                 fields.append({'type': 'begin group',
                                'name': 'sys_info',
@@ -456,9 +467,10 @@ class Survey(models.Model):
                             'name': formattedFieldName(x['id'], y['name']),
                             'label': y['alias'],
                             'appearance': appearance,
-                            'readonly': 'yes' # todo: figure out if system should ever be collected on the fly...
+                            'readonly': 'yes'  # todo: figure out if system should ever be collected on the fly...
                         })
                 fields.append({'type': 'end group'})
+            # facility layer
             elif x['name'] == 'Base_Facility_Inventory':
                 fields.append({'type': 'begin group',
                                'name': 'facility_info',
@@ -481,7 +493,7 @@ class Survey(models.Model):
                             'appearance': appearance,
                             'readonly': 'pulldata("@property", "mode") = "edit"'
                         })
-                fields.append({'type':'end group'})
+                fields.append({'type': 'end group'})
 
         #     for y in x['fields']:
         #         if y['name'] not in omit_fields:
@@ -502,7 +514,7 @@ class Survey(models.Model):
         #             })
         #         else:
         #             fields.append({
-        #                 'type': FeatureServiceResponse.objects.get(fs_response_type=y['type']).esri_field_type,
+        #                 'type': ESRIFieldTypes.objects.get(fs_field_type=y['type']).data_type,
         #                 'name': formattedFieldName(x['id'], y['name']),
         #                 'label': y['alias'],
         #                 'readonly': 'yes'
@@ -511,7 +523,7 @@ class Survey(models.Model):
         return fields
 
     def get_formatted_survey_fields(self, layer_id):
-        feat_service = json.loads(self.service_config)['layers']
+        feat_service = json.loads(self.epa_response.map_service_config)['layers']
         fields = [{'type': 'begin group',
                    'name': 'sys_info',
                    'label': '<h2 style="background-color:#3295F7;"><center>System Name: ${layer_0_SystemName} System ID: ${layer_0_pws_fac_id}</h2></center>',
@@ -531,7 +543,7 @@ class Survey(models.Model):
                              'readonly': 'yes'
                              },
                         )
-                fields.append({'type':'end group'})
+                fields.append({'type': 'end group'})
         return fields
 
     class Meta:
@@ -547,6 +559,7 @@ class QuestionSet(models.Model):
     surveys = models.ManyToManyField('Survey', related_name='question_set')
     questions = models.ManyToManyField('MasterQuestion', related_name='question_set', through='QuestionList')
     sort_order = models.IntegerField(null=True, blank=True)
+
     # media = models.ForeignKey('Media', on_delete=models.PROTECT, null=True, blank=True)
     # category = models.ForeignKey('Category', on_delete=models.PROTECT, null=True, blank=True)
     # facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True)
@@ -563,10 +576,6 @@ class QuestionList(models.Model):
     active = models.BooleanField(default=True)
     required = models.BooleanField(default=True)
     sort_order = models.IntegerField(null=True, blank=True)
-
-
-
-
 
 
 class SurveyResponse(models.Model):
@@ -602,4 +611,3 @@ class Dashboard(models.Model):
     @property
     def view_production(self):
         return mark_safe(f'<a target="_blank" href="https://www.arcgis.com/apps/dashboards/{self.production_id.hex}">View {self.name} Production</a>')
-
