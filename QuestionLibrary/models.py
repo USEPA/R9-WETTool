@@ -255,7 +255,7 @@ class Survey(models.Model):
     # this way the data doesn't even need to be on same machine or network. could even be in agol
     survey123_service = models.URLField(null=True, blank=True)
     epa_response = models.ForeignKey('EPAResponse', on_delete=models.SET_NULL, null=True, blank=True,
-                                     help_text='Select an EPA response and click "Save and Continue Editing" before proceeding.')
+                                     help_text='Select an active EPA response and click "Save and Continue Editing" before proceeding.')
 
     # the querying the service based on extent or values would be much more straight forward
     # todo: limit the results of the data source to only select a subset.  This is for creating preload survey
