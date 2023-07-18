@@ -52,6 +52,7 @@ def get_token():
         raise Exception('AGOL Token expired')
     return token
 
+
 def get_latest_assessment_responses(group_by_field, assessment_responses, current_responses):
     group_by_fields = ['question', group_by_field]
     adds, updates = [], []

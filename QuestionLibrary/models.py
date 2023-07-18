@@ -495,32 +495,6 @@ class Survey(models.Model):
                         })
                 fields.append({'type': 'end group'})
 
-        #     for y in x['fields']:
-        #         if y['name'] not in omit_fields:
-        #             fields.append({
-        #                 'type': 'text',
-        #                 'name': formattedFieldName(x['id'], y['name']),
-        #                 'label': y['alias'],
-        #                 'readonly': 'yes'
-        #             })
-        # else:
-        #     for y in x['fields']:
-        #         if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-        #             fields.append({
-        #                 'type': 'hidden',
-        #                 'name': formattedFieldName(x['id'], y['name']),
-        #                 'label': y['alias'],
-        #                 'readonly': 'yes'
-        #             })
-        #         else:
-        #             fields.append({
-        #                 'type': ESRIFieldTypes.objects.get(fs_field_type=y['type']).data_type,
-        #                 'name': formattedFieldName(x['id'], y['name']),
-        #                 'label': y['alias'],
-        #                 'readonly': 'yes'
-        #             })
-        #         fields.append({'type': 'end group'})
-        return fields
 
     def get_formatted_survey_fields(self, layer_id):
         feat_service = json.loads(self.epa_response.map_service_config)['layers']

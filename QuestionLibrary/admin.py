@@ -321,14 +321,6 @@ class SurveyAdminForm(ModelForm):
             self.fields['assessment_layer'] = forms.ChoiceField(choices=self.instance.epa_response.get_tables_as_choices(),
                                                                 label=self.fields['assessment_layer'].label)
 
-            # config = json.loads(self.instance.epa_response.map_service_config)
-            # if type(config) is dict:
-            #     layer_choice = [(x['id'], x['name']) for x in config['layers']]
-            #     self.fields['layer'].choices = layer_choice
-            #
-            #     layer_choice = [(x['id'], x['name']) for x in config['tables']]
-            #     self.fields['assessment_layer'].choices = layer_choice
-
     class Meta:
         model = Survey
         exclude = []
