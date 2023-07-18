@@ -354,7 +354,6 @@ class Survey(models.Model):
         # fields =[]
         # for x in fields:
 
-        # if self.layer == '0':
         if self.layer == self.epa_response.system_layer_id:
             # system (base inventory) layer
             fields = self.get_formatted_survey_fields(self.layer)
@@ -365,19 +364,18 @@ class Survey(models.Model):
         field_df = pd.DataFrame(fields)
         field_df_drop_dups = field_df.drop_duplicates()
 
-        # if self.layer == '0':
         if self.layer == self.epa_response.system_layer_id:
             layer = [{
                 'form_title': self.name,
                 'form_id': '',
-                'instance_name': 'concat("System Name: "+${layer_0_SystemName}, " ", "System Status: " + ${layer_0_ActivityStatus})',
+                'instance_name': 'concat("System Name: "+${layer_'+str(self.layer)+'_SystemName}, " ", "System Status: " + ${layer_'+str(self.layer)+'_ActivityStatus})',
                 'style': 'theme-grid'
             }]
         else:
             layer = [{
                 'form_title': self.name,
                 'form_id': '',
-                'instance_name': 'concat("Facility Name: "+${layer_1_FacilityName}, " ", "Facility ID: " + ${layer_1_FacilityID}, " ", "Facility Type: " + ${layer_1_Fac_Type})',
+                'instance_name': 'concat("Facility Name: "+${layer_'+str(self.layer)+'_FacilityName}, " ", "Facility ID: " + ${layer_'+str(self.layer)+'_FacilityID}, " ", "Facility Type: " + ${layer_'+str(self.layer)+'_Fac_Type})',
                 'style': 'theme-grid'
             }]
 
@@ -426,9 +424,6 @@ class Survey(models.Model):
             settings_df.to_excel(writer, sheet_name='settings', index=False)
         # return questions_df, choices_df
 
-    def getSurveyService(self, user):
-        get_service_config(user=user, service=self.survey123_service)
-
     # returns type and appearance
     def get_base_feature_field_info(self, field):
         if field['domain'] is not None:
@@ -438,87 +433,90 @@ class Survey(models.Model):
 
     def get_formatted_fields(self):
         feat_service = json.loads(self.epa_response.map_service_config)['layers']
-        fields = []
+        survey_fields = []
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
                        'last_edited_user', 'last_edited_date', 'OBJECTID'}
 
         # todo do these need to be hidden or do the need to be left out completely
         # todo need to figure out a way to not include the base facility inventory fields when the user is doing a base inventory assessment
 
-        for x in feat_service:
+        for layer in feat_service:
             # system layer
-            if x['name'] == 'Base_Inventory':
-                fields.append({'type': 'begin group',
-                               'name': 'sys_info',
-                               'label': '<h2 style="background-color:#3295F7;"><center>System Name: ${layer_0_SystemName} System ID ${layer_0_pws_fac_id}</h2></center>',
-                               'appearance': 'w1 field-list'})
-                for y in x['fields']:
-                    if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                        fields.append({
+            # if layer['name'] == 'Base_Inventory':
+            if layer['id'] == self.epa_response.system_layer_id:
+                survey_fields.append({'type': 'begin group',
+                                      'name': 'sys_info',
+                                      'label': '<h2 style="background-color:#3295F7; text-align:center;">System Name: ${layer_' + str(layer['id']) + '_SystemName} System ID ${layer_' + str(layer['id']) + '_pws_fac_id}</h2>',
+                                      'appearance': 'w1 field-list'})
+                for field in layer['fields']:
+                    if field['type'] == 'esriFieldTypeGUID' or field['type'] == 'esriFieldTypeOID':
+                        survey_fields.append({
                             'type': 'hidden',
-                            'name': formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
+                            'name': formattedFieldName(layer['id'], field['name']),
+                            'label': field['alias'],
                             'readonly': 'yes'
                         })
-                    elif y['name'] not in omit_fields:
-                        t, appearance = self.get_base_feature_field_info(y)
-                        fields.append({
+                    elif field['name'] not in omit_fields:
+                        t, appearance = self.get_base_feature_field_info(field)
+                        survey_fields.append({
                             'type': t,
-                            'name': formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
+                            'name': formattedFieldName(layer['id'], field['name']),
+                            'label': field['alias'],
                             'appearance': appearance,
                             'readonly': 'yes'  # todo: figure out if system should ever be collected on the fly...
                         })
-                fields.append({'type': 'end group'})
+                survey_fields.append({'type': 'end group'})
             # facility layer
-            elif x['name'] == 'Base_Facility_Inventory':
-                fields.append({'type': 'begin group',
-                               'name': 'facility_info',
-                               'label': '<h2 style="background-color:#00C52A;"><center>Facility Name: ${layer_1_FacilityName} Facility ID: ${layer_1_FacilityID}</h2></center>',
-                               'appearance': 'w1 field-list'})
-                for y in x['fields']:
-                    if y['type'] == 'esriFieldTypeGUID' or y['type'] == 'esriFieldTypeOID':
-                        fields.append({
+            # elif layer['name'] == 'Base_Facility_Inventory':
+            elif layer['id'] == self.epa_response.facility_layer_id:
+                survey_fields.append({'type': 'begin group',
+                                      'name': 'facility_info',
+                                      'label': '<h2 style="background-color:#00C52A; text-align:center;">Facility Name: ${layer_' + str(layer['id']) + '_FacilityName} Facility ID: ${layer_' + str(layer['id']) + '_FacilityID}</h2>',
+                                      'appearance': 'w1 field-list'})
+                for field in layer['fields']:
+                    if field['type'] == 'esriFieldTypeGUID' or field['type'] == 'esriFieldTypeOID':
+                        survey_fields.append({
                             'type': 'hidden',
-                            'name': formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
+                            'name': formattedFieldName(layer['id'], field['name']),
+                            'label': field['alias'],
                             'readonly': 'yes'
                         })
-                    elif y['name'] not in omit_fields:
-                        t, appearance = self.get_base_feature_field_info(y)
-                        fields.append({
+                    elif field['name'] not in omit_fields:
+                        t, appearance = self.get_base_feature_field_info(field)
+                        survey_fields.append({
                             'type': t,
-                            'name': formattedFieldName(x['id'], y['name']),
-                            'label': y['alias'],
+                            'name': formattedFieldName(layer['id'], field['name']),
+                            'label': field['alias'],
                             'appearance': appearance,
                             'readonly': 'pulldata("@property", "mode") = "edit"'
                         })
-                fields.append({'type': 'end group'})
+                survey_fields.append({'type': 'end group'})
 
+        return survey_fields
 
     def get_formatted_survey_fields(self, layer_id):
         feat_service = json.loads(self.epa_response.map_service_config)['layers']
-        fields = [{'type': 'begin group',
-                   'name': 'sys_info',
-                   'label': '<h2 style="background-color:#3295F7;"><center>System Name: ${layer_0_SystemName} System ID: ${layer_0_pws_fac_id}</h2></center>',
-                   'appearance': 'w1 field-list'}]
+        survey_fields = [{'type': 'begin group',
+                          'name': 'sys_info',
+                          'label': '<h2 style="background-color:#3295F7; text-align:center;">System Name: ${layer_' + str(layer_id) + '_SystemName} System ID: ${layer_' + str(layer_id) + '_pws_fac_id}</h2>',
+                          'appearance': 'w1 field-list'}]
 
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
                        'last_edited_user', 'last_edited_date', 'OBJECTID'}
 
-        for x in feat_service:
-            if x['id'] == int(layer_id):
-                for y in x['fields']:
-                    if y['name'] not in omit_fields:
-                        fields.append(
-                            {'type': 'text' if y['domain'] is None else f'select_one {y["domain"]["name"]}',
-                             'name': formattedFieldName(x['id'], y['name']),
-                             'label': y['alias'],
+        for layer in feat_service:
+            if layer['id'] == int(layer_id):
+                for field in layer['fields']:
+                    if field['name'] not in omit_fields:
+                        survey_fields.append(
+                            {'type': 'text' if field['domain'] is None else f'select_one {field["domain"]["name"]}',
+                             'name': formattedFieldName(layer['id'], field['name']),
+                             'label': field['alias'],
                              'readonly': 'yes'
                              },
                         )
-                fields.append({'type': 'end group'})
-        return fields
+                survey_fields.append({'type': 'end group'})
+        return survey_fields
 
     class Meta:
         verbose_name = "Assessment"
