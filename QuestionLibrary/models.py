@@ -198,7 +198,7 @@ class MasterQuestion(models.Model):
             return f"${{layer_{layer_id}_media}}='{self.media.description}'"
 
     def relevant_for_feature(self, feature, layer_id):
-        if self.facility_type is not None and self.media is not None and int(layer_id) != survey.epa_response.system_layer_id:
+        if self.facility_type is not None and self.media is not None and int(layer_id) != self.question_set.through.epa_response.system_layer_id:
             return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description and \
                 feature['attributes'][f'layer_{layer_id}_Fac_Type'] == self.facility_type.fac_code
 
@@ -216,7 +216,7 @@ class MasterQuestion(models.Model):
                     'type': 'begin_group',
                     'name': self.formatted_survey_field_name,
                     'label': self.question,
-                    'relevant': f" {self.formatted_survey_category_field_relevant(layer_index)}",
+                    'relevant': f" {self.formatted_survey_category_field_relevant(survey, layer_index)}",
                 },
                 {
                     'type': self.formatted_survey_field_type.lower(),
