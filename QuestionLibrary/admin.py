@@ -102,6 +102,9 @@ class EPAResponseForm(ModelForm):
                                                                label=self.fields['system_layer_id'].label)
             self.fields['facility_layer_id'] = forms.ChoiceField(choices=self.instance.get_layers_as_choices(),
                                                                  label=self.fields['facility_layer_id'].label)
+        # else:
+        #     self.fields['system_layer_id'].widget = forms.HiddenInput()
+        #     self.fields['facility_layer_id'].widget = forms.HiddenInput()
 
     #  todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
 
@@ -110,22 +113,46 @@ class EPAResponseForm(ModelForm):
 class EPAResponseAdmin(admin.ModelAdmin):
     inlines = [SurveyInline]
     actions = [disable_epa_response_action, enable_epa_response_action]
-    readonly_fields = ['status']
-    exclude = ['disabled_date']
-    list_display = ['name', 'status']
+    readonly_fields = ['_status', '_map_service_config']
+    exclude = ['disabled_date', 'map_service_config']
+    list_display = ['name', '_status', '_map_service_config']
+    list_filter = ['disabled_date']
     search_fields = ['name']
     form = EPAResponseForm
 
-    def status(self, obj=None):
+    def _status(self, obj=None):
         if obj.disabled_date is None:
             return 'Active'
         else:
             return f'Disabled {obj.disabled_date.strftime("%Y-%m-%d")}'
 
+    def _map_service_config(self, obj=None):
+        if obj.map_service_config is None:
+            return '-'
+        else:
+            config = json.loads(obj.map_service_config)
+            if 'error' in config:
+                return 'Error getting configuration'
+            if 'layers' in config:
+                return 'Configuration Downloaded'
+
     def save_model(self, request, obj, form, change):
         if 'map_service_url' in form.changed_data:
             obj.get_map_service(request.user)
         super().save_model(request, obj, form, change)
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, may_have_duplicates = super().get_search_results(
+            request, queryset, search_term,
+        )
+        # filter results in the autocomplete inline fields to only include active epa_responses
+        if 'autocomplete' in request.path:
+            queryset = self.model.objects.filter(disabled_date=None)
+
+            if search_term:
+                queryset = self.model.objects.filter(disabled_date=None, name__contains=search_term)
+
+        return queryset, may_have_duplicates
 
 
 @admin.register(Media)
