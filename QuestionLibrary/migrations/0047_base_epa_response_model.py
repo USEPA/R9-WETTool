@@ -36,6 +36,7 @@ class Migration(migrations.Migration):
                 ('map_service_config', models.TextField(null=True, blank=True)),
                 ('system_layer_id', models.IntegerField(default=0, null=True, verbose_name='System Layer')),
                 ('facility_layer_id', models.IntegerField(default=1, null=True, verbose_name='Facility Layer')),
+                ('assessment_table_id', models.IntegerField(default=2, null=True, verbose_name='Responses Table')),
                 ('disabled_date', models.DateTimeField(null=True, blank=True)),
             ],
             options={

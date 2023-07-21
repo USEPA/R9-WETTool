@@ -69,6 +69,7 @@ class EPAResponse(models.Model):
     map_service_config = models.TextField(null=True, blank=True)
     system_layer_id = models.IntegerField(verbose_name='System Layer', null=True, default=0)
     facility_layer_id = models.IntegerField(verbose_name='Facility Layer', null=True, default=1)
+    assessment_table_id = models.IntegerField(verbose_name='Responses Table', null=True, default=2)
     disabled_date = models.DateTimeField(null=True, blank=True)
 
     def __init__(self, *args, **kwargs):
@@ -197,8 +198,11 @@ class MasterQuestion(models.Model):
         else:
             return f"${{layer_{layer_id}_media}}='{self.media.description}'"
 
-    def relevant_for_feature(self, feature, layer_id):
-        if self.facility_type is not None and self.media is not None and int(layer_id) != self.question_set.through.epa_response.system_layer_id:
+    def relevant_for_feature(self, feature, survey):
+        layer_id = survey.layer
+        if self.facility_type is not None \
+                and self.media is not None \
+                and int(layer_id) != survey.epa_response.system_layer_id:
             return feature['attributes'][f'layer_{layer_id}_media'] == self.media.description and \
                 feature['attributes'][f'layer_{layer_id}_Fac_Type'] == self.facility_type.fac_code
 
@@ -265,8 +269,7 @@ class Survey(models.Model):
     # sub_facility_type = models.ForeignKey('FacilitySubType', on_delete=models.PROTECT)
 
     selected_features = models.TextField(null=True, blank=True)
-    layer = models.IntegerField(null=True, blank=True)  # Feature Layer to collect?
-    assessment_layer = models.IntegerField(null=True, blank=True)  # Survey responses?
+    layer = models.IntegerField(null=True, blank=True)  # Feature Layer to collect (system or facility)
 
     # color_code = models.CharField(max_length=6)
 

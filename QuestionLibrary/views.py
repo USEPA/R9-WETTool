@@ -103,7 +103,7 @@ def webhook(request):
             process_response_features.message_with_options(args=(survey.map_service_url, survey.map_service_config, survey.layer,
                                                                  payload['portalInfo']['token'], payload['eventType'],
                                                                  [payload['feature']]), pipe_ignore=True),
-            load_responses.message(survey.map_service_url, survey.map_service_config, survey.assessment_layer,
+            load_responses.message(survey.map_service_url, survey.map_service_config, survey.epa_response.assessment_table_id,
                                    payload['portalInfo']['token'], payload['eventType'], received_timestamp)
         ]).run()
 

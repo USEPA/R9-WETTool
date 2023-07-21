@@ -23,8 +23,9 @@ def load_selected_responses(modeladmin, request, queryset):
 
         pipeline([
             get_submitted_responses.message(survey.survey123_service, token),
-            process_response_features.message(survey.map_service_url, survey.epa_response.map_service_config, survey.layer, token, 'editData'),
-            load_responses.message(survey.map_service_url, survey.epa_response.map_service_config, survey.assessment_layer, token, 'editData', None)
+            process_response_features.message(survey.epa_response.map_service_url, survey.epa_response.map_service_config, survey.layer, token, 'editData'),
+            load_responses.message(survey.epa_response.map_service_url, survey.epa_response.map_service_config, survey.epa_response.assessment_table_id, token,
+                                   'editData', None)
         ]).run()
 
         messages.success(request, 'Loading latest responses')
@@ -102,9 +103,12 @@ class EPAResponseForm(ModelForm):
                                                                label=self.fields['system_layer_id'].label)
             self.fields['facility_layer_id'] = forms.ChoiceField(choices=self.instance.get_layers_as_choices(),
                                                                  label=self.fields['facility_layer_id'].label)
+            self.fields['assessment_table_id'] = forms.ChoiceField(choices=self.instance.get_tables_as_choices(),
+                                                                   label=self.fields['assessment_table_id'].label)
         # else:
         #     self.fields['system_layer_id'].widget = forms.HiddenInput()
         #     self.fields['facility_layer_id'].widget = forms.HiddenInput()
+        #     self.fields['assessment_table_id'].widget = forms.HiddenInput()
 
     #  todo add button to grab attributes from base data and post to survey123 service. this might not be the best place for this. need to think this through and ask karl
 
@@ -318,8 +322,6 @@ class SurveyAdminForm(ModelForm):
         if self.instance.epa_response and self.instance.epa_response.map_service_config is not None:
             self.fields['layer'] = forms.ChoiceField(choices=self.instance.epa_response.get_layers_as_choices(),
                                                      label=self.fields['layer'].label)
-            self.fields['assessment_layer'] = forms.ChoiceField(choices=self.instance.epa_response.get_tables_as_choices(),
-                                                                label=self.fields['assessment_layer'].label)
 
     class Meta:
         model = Survey
@@ -338,7 +340,7 @@ class SurveyAdmin(admin.ModelAdmin):
     form = SurveyAdminForm
     list_display = ['name', 'epa_response', 'base_service_ready', 'survey_service_ready']
 
-    fields = ['name', 'epa_response', 'layer', 'assessment_layer', 'survey123_service', 'selected_features', '_base_map_service_url']
+    fields = ['name', 'epa_response', 'layer', 'survey123_service', 'selected_features', '_base_map_service_url']
     search_fields = ['name']
     autocomplete_fields = ['epa_response']
     actions = [download_xls_action, load_selected_records_action, load_selected_responses]
@@ -354,6 +356,7 @@ class SurveyAdmin(admin.ModelAdmin):
                 '<span id="id_base_service_url">{}</span>',
                 mark_safe(obj.epa_response.map_service_url)
             )
+
 
 class QuestionSetInlineForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
