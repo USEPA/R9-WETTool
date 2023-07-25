@@ -87,6 +87,16 @@ class EPAResponse(models.Model):
         config = json.loads(self.map_service_config)
         return [(table['id'], table['name']) for table in config['tables']]
 
+    def _map_service_config(self):
+        if self.map_service_config is None:
+            return '-'
+        else:
+            config = json.loads(self.map_service_config)
+            if 'error' in config:
+                return 'Error getting configuration'
+            if 'layers' in config:
+                return 'Configuration Downloaded'
+
     class Meta:
         verbose_name = "EPA Response"
 

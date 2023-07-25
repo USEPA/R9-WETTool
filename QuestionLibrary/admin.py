@@ -130,16 +130,6 @@ class EPAResponseAdmin(admin.ModelAdmin):
         else:
             return f'Disabled {obj.disabled_date.strftime("%Y-%m-%d")}'
 
-    def _map_service_config(self, obj=None):
-        if obj.map_service_config is None:
-            return '-'
-        else:
-            config = json.loads(obj.map_service_config)
-            if 'error' in config:
-                return 'Error getting configuration'
-            if 'layers' in config:
-                return 'Configuration Downloaded'
-
     def save_model(self, request, obj, form, change):
         if 'map_service_url' in form.changed_data:
             obj.get_map_service(request.user)
