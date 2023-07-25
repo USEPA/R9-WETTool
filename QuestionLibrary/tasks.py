@@ -53,7 +53,7 @@ def get_submitted_responses(survey_service, token):
     r_json = response.json()
     if 'error' in r_json:
         # log but don't retry
-        logger.error(response.content)
+        logger.error(['get_submitted_responses', response.content])
 
     return r_json.get('features', [])
 
@@ -99,11 +99,11 @@ def process_response_features(survey_base_map_service, survey_service_config, su
                               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
             if 'error' in r.json():
                 # log but don't retry
-                logger.error([r.content, data])
+                logger.error(['process_response_features', r.content, data])
 
         return response_features  # pass through pipeline so load_responses can run on these responses
     except Exception as e:
-        logger.error(response_features)
+        logger.error(['process_response_features', response_features])
         raise e
 
 
@@ -184,9 +184,9 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                           params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
         if 'error' in r.json():
-            logger.error(response_features)
+            logger.error(['load_responses error', r.json(), response_features])
     except Exception as e:
-        logger.error(response_features)
+        logger.error(['load_responses exception', response_features])
         raise e
 
 
@@ -199,12 +199,12 @@ def load_surveys(service_url, token, features):
                              data={"where": "survey_status is null"},
                              headers={'Content-type': 'application/x-www-form-urlencoded'})
     if 'error' in delete_r.json():
-        logger.error(delete_r.content)
+        logger.error(['load_surveys', delete_r.content])
 
     add_r = requests.post(url=f'{service_url}/0/applyEdits', params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
     if 'error' in add_r.json():
-        logger.error(add_r.content)
+        logger.error(['load_surveys', add_r.content])
 
 
 @actor()
@@ -329,4 +329,4 @@ def approve_draft_dashboard_service(base_service_url, draft_service_url, approve
                                              data=data,
                                              headers={'Content-type': 'application/x-www-form-urlencoded'})
     if "error" in update_features_response.json():
-        logger.error(update_features_response.content)
+        logger.error(['approve_draft_dashboard_service', update_features_response.content])
