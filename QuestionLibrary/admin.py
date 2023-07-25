@@ -136,19 +136,6 @@ class EPAResponseAdmin(admin.ModelAdmin):
             obj.get_map_service(request.user)
         super().save_model(request, obj, form, change)
 
-    def get_search_results(self, request, queryset, search_term):
-        queryset, may_have_duplicates = super().get_search_results(
-            request, queryset, search_term,
-        )
-        # filter results in the autocomplete inline fields to only include active epa_responses
-        if 'autocomplete' in request.path:
-            queryset = self.model.objects.filter(disabled_date=None)
-
-            if search_term:
-                queryset = self.model.objects.filter(disabled_date=None, name__contains=search_term)
-
-        return queryset, may_have_duplicates
-
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
