@@ -96,6 +96,7 @@ class SurveyInline(admin.TabularInline):
 class EPAResponseForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(EPAResponseForm, self).__init__(*args, **kwargs)
+        # layer choices are stored in the JSON map_service_config
         # turn the layer id fields into dropdowns populated with the layers in base service config JSON
         # field labels as defined in the model would be overwritten, so we copy those to the new dropdown fields
         if self.instance.map_service_config is not None:
@@ -309,6 +310,9 @@ class SurveyAdminForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # layer choices are stored in the JSON map_service_config
+        # turn the layer id int fields into dropdowns populated with the layers in base service config JSON
+        # field labels as defined in the model would be overwritten, so we copy those to the new dropdown fields
         if self.instance.epa_response and self.instance.epa_response.map_service_config is not None:
             self.fields['layer'] = forms.ChoiceField(choices=self.instance.epa_response.get_layers_as_choices(),
                                                      label=self.fields['layer'].label)
