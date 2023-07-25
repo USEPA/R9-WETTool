@@ -44,9 +44,9 @@ def set_survey_to_submitted(payload):
 
 
 @actor()
-def get_submitted_responses(survey_service, token):
+def get_submitted_responses(survey123_service_url, token):
     token = get_token()
-    response = requests.get(f"{survey_service}/0/query",
+    response = requests.get(f"{survey123_service_url}/0/query",
                             params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token,
                                     "f": "json"})
     response.raise_for_status()
@@ -59,7 +59,7 @@ def get_submitted_responses(survey_service, token):
 
 
 @actor()
-def process_response_features(survey_base_map_service, survey_service_config, survey_layer, token, eventType,
+def process_response_features(survey_base_map_service_url, survey_service_config, survey_layer, token, eventType,
                               response_features):
     try:
         token = get_token() # override for now
@@ -94,7 +94,7 @@ def process_response_features(survey_base_map_service, survey_service_config, su
             # ignore eventType and always check?? based on what? if someone can enter then what happens...
             # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
 
-            r = requests.post(f"{survey_base_map_service}/{layer['id']}/applyEdits",
+            r = requests.post(f"{survey_base_map_service_url}/{layer['id']}/applyEdits",
                               params={'token': token, 'f': 'json'},
                               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
             if 'error' in r.json():
@@ -108,7 +108,7 @@ def process_response_features(survey_base_map_service, survey_service_config, su
 
 
 @actor()
-def load_responses(survey_base_map_service, survey_service_config, survey_assessment_layer, token, eventType, received_timestamp, response_features):
+def load_responses(survey_base_map_service_url, survey_service_config, system_layer_id, facility_layer_id, assessment_table_id, token, eventType, received_timestamp, response_features):
     try:
         token = get_token() # override for now
         # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
@@ -120,14 +120,12 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
         # not sure if we will need origin_feature at any point
         # origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
 
-        table = next(x for x in json.loads(survey_service_config)['tables'] if x['id'] == int(survey_assessment_layer))
+        table = next(x for x in json.loads(survey_service_config)['tables'] if x['id'] == int(assessment_table_id))
         assessment_responses = []
         for response_feature in response_features:
             fac_id = None
-            if fac_id is None and response_feature['attributes'].get('layer_1_FacilityID') is not None:
-                fac_id = response_feature['attributes']['layer_1_FacilityID']
-            else:
-                fac_id = None
+            if response_feature['attributes'].get(f'layer_{facility_layer_id}_FacilityID') is not None:
+                fac_id = response_feature['attributes'][f'layer_{facility_layer_id}_FacilityID']
             master_questions = {q.formatted_survey_field_name: q for q in MasterQuestion.objects.all()}
             for k, v in response_feature['attributes'].items():
                 if not k.startswith('layer'):
@@ -141,7 +139,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                                 'response': v,
                                 'units': units,
                                 'facility_id': fac_id,
-                                'system_id': response_feature['attributes'].get('layer_0_pws_fac_id', None),
+                                'system_id': response_feature['attributes'].get(f'layer_{system_layer_id}_pws_fac_id', None),
                                 'EditDate': get_edit_date(response_feature, eventType, received_timestamp),
                                 'display_name': f"{v} {units}"
                             })
@@ -161,7 +159,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                             'question': master_questions[k].question,
                             'response': v,
                             'facility_id': fac_id,
-                            'system_id': response_feature['attributes'].get('layer_0_pws_fac_id', None),
+                            'system_id': response_feature['attributes'].get(f'layer_{system_layer_id}_pws_fac_id', None),
                             'display_name': v_decoded,
                             'EditDate': get_edit_date(response_feature, eventType, received_timestamp)
                         })
@@ -170,8 +168,8 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
             'system_id': [x for x in assessment_responses if x['facility_id'] is None]
         }
         captured_responses = {
-            'facility_id': get_all_features(f"{survey_base_map_service}/{table['id']}", token, "facility_id is not null"),
-            'system_id': get_all_features(f"{survey_base_map_service}/{table['id']}", token, "facility_id is null")
+            'facility_id': get_all_features(f"{survey_base_map_service_url}/{table['id']}", token, "facility_id is not null"),
+            'system_id': get_all_features(f"{survey_base_map_service_url}/{table['id']}", token, "facility_id is null")
         }
         updates, adds = [], []
         for field, assessment_responses in pre_grouped_assessments.items():
@@ -180,7 +178,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
             updates += u
 
         data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-        r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits",
+        r = requests.post(f"{survey_base_map_service_url}/{table['id']}/applyEdits",
                           params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
         if 'error' in r.json():

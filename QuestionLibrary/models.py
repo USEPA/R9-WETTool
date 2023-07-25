@@ -460,7 +460,8 @@ class Survey(models.Model):
             if layer['id'] == self.epa_response.system_layer_id:
                 survey_fields.append({'type': 'begin group',
                                       'name': 'sys_info',
-                                      'label': '<h2 style="background-color:#3295F7; text-align:center;">System Name: ${layer_' + str(layer['id']) + '_SystemName} System ID ${layer_' + str(layer['id']) + '_pws_fac_id}</h2>',
+                                      'label': '<h2 style="background-color:#3295F7; text-align:center;">System Name: ${layer_' + str(layer['id']) + '_SystemName}<br/>' +
+                                               'System ID: ${layer_' + str(layer['id']) + '_pws_fac_id}</h2>',
                                       'appearance': 'w1 field-list'})
                 for field in layer['fields']:
                     if field['type'] == 'esriFieldTypeGUID' or field['type'] == 'esriFieldTypeOID':
@@ -485,7 +486,8 @@ class Survey(models.Model):
             elif layer['id'] == self.epa_response.facility_layer_id:
                 survey_fields.append({'type': 'begin group',
                                       'name': 'facility_info',
-                                      'label': '<h2 style="background-color:#00C52A; text-align:center;">Facility Name: ${layer_' + str(layer['id']) + '_FacilityName} Facility ID: ${layer_' + str(layer['id']) + '_FacilityID}</h2>',
+                                      'label': '<h2 style="background-color:#00C52A; text-align:center;">Facility Name: ${layer_' + str(layer['id']) + '_FacilityName}<br/>' +
+                                               'Facility ID: ${layer_' + str(layer['id']) + '_FacilityID}</h2>',
                                       'appearance': 'w1 field-list'})
                 for field in layer['fields']:
                     if field['type'] == 'esriFieldTypeGUID' or field['type'] == 'esriFieldTypeOID':

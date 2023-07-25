@@ -23,9 +23,16 @@ def load_selected_responses(modeladmin, request, queryset):
 
         pipeline([
             get_submitted_responses.message(survey.survey123_service, token),
-            process_response_features.message(survey.epa_response.map_service_url, survey.epa_response.map_service_config, survey.layer, token, 'editData'),
-            load_responses.message(survey.epa_response.map_service_url, survey.epa_response.map_service_config, survey.epa_response.assessment_table_id, token,
-                                   'editData', None)
+            process_response_features.message(survey.epa_response.map_service_url,
+                                              survey.epa_response.map_service_config,
+                                              survey.layer,
+                                              token, 'editData'),
+            load_responses.message(survey.epa_response.map_service_url,
+                                   survey.epa_response.map_service_config,
+                                   survey.epa_response.system_layer_id,
+                                   survey.epa_response.facility_layer_id,
+                                   survey.epa_response.assessment_table_id,
+                                   token, 'editData', None)
         ]).run()
 
         messages.success(request, 'Loading latest responses')
