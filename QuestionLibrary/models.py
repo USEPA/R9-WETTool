@@ -1,22 +1,14 @@
 from django.db import models
 from django.conf import settings
-from django.db.models import F
+from django.core.exceptions import ValidationError
+from django.utils.safestring import mark_safe
+from django.contrib.auth.models import User
 import shutil
+import uuid
+import json
 import pandas as pd
 import os
 import re
-
-from django.utils.safestring import mark_safe
-from social_django.utils import load_strategy
-from django.contrib.auth.models import User
-import requests
-import json
-from urllib.parse import urlencode
-from itertools import islice
-from django.core.exceptions import ValidationError
-import csv
-from django.utils.html import format_html
-import uuid
 
 from QuestionLibrary.func import formattedFieldName, get_service_config
 
@@ -132,6 +124,7 @@ class Survey123FieldType(LookupAbstract):
 
 
 class Unit(LookupAbstract):
+    # Measurement Units
     pass
 
 
