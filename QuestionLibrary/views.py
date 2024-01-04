@@ -7,17 +7,19 @@ from dramatiq import pipeline
 from social_django.utils import load_strategy
 import requests
 import urllib
-
-from QuestionLibrary.tasks import load_responses, set_survey_to_submitted, process_response_features
-from QuestionLibrary.models import *
 from wsgiref.util import FileWrapper
 import csv
 from django.core.exceptions import PermissionDenied
 import json
 from social_django.utils import load_strategy
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
+from rest_framework import permissions
+from rest_framework.viewsets import ModelViewSet
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime
+from QuestionLibrary.tasks import load_responses, set_survey_to_submitted, process_response_features
+from QuestionLibrary.models import *
+from QuestionLibrary.serializers import *
 import logging
 logger = logging.getLogger('django')
 
@@ -188,5 +190,97 @@ def webhook(request):
         raise e
 
 
+class LookupGroupViewSet(ModelViewSet):
+    queryset = LookupGroup.objects.all()
+    serializer_class = LookupGroupSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 
+class LookupViewSet(ModelViewSet):
+    queryset = Lookup.objects.all()
+    serializer_class = LookupSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class MediaViewSet(ModelViewSet):
+    queryset = Media.objects.all()
+    serializer_class = MediaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class EPAResponseViewSet(ModelViewSet):
+    queryset = EPAResponse.objects.all()
+    serializer_class = EPAResponseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class FacilityTypeViewSet(ModelViewSet):
+    queryset = FacilityType.objects.all()
+    serializer_class = FacilityTypeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class CategoryViewSet(ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class Survey123FieldTypeViewSet(ModelViewSet):
+    queryset = Survey123FieldType.objects.all()
+    serializer_class = Survey123FieldTypeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class UnitViewSet(ModelViewSet):
+    queryset = Unit.objects.all()
+    serializer_class = UnitSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class ESRIFieldTypesViewSet(ModelViewSet):
+    queryset = ESRIFieldTypes.objects.all()
+    serializer_class = ESRIFieldTypesSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class MasterQuestionViewSet(ModelViewSet):
+    queryset = MasterQuestion.objects.all()
+    serializer_class = MasterQuestionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class SurveyViewSet(ModelViewSet):
+    queryset = Survey.objects.all()
+    serializer_class = SurveySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class QuestionSetViewSet(ModelViewSet):
+    queryset = QuestionSet.objects.all()
+    serializer_class = QuestionSetSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class QuestionListViewSet(ModelViewSet):
+    queryset = QuestionList.objects.all()
+    serializer_class = QuestionListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class SurveyResponseViewSet(ModelViewSet):
+    queryset = SurveyResponse.objects.all()
+    serializer_class = SurveyResponseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class RelatedQuestionListViewSet(ModelViewSet):
+    queryset = RelatedQuestionList.objects.all()
+    serializer_class = RelatedQuestionListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class DashboardViewSet(ModelViewSet):
+    queryset = Dashboard.objects.all()
+    serializer_class = DashboardSerializer
+    permission_classes = [permissions.IsAuthenticated]

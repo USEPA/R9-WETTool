@@ -16,15 +16,40 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.urls import path, include
-from QuestionLibrary.views import EsriProxy, webhook
+from rest_framework import routers
+from QuestionLibrary.views import *
 admin.site.site_header = 'WET Tool'
+
+
+api_router = routers.DefaultRouter()
+api_router.register(r'lookup_group', LookupGroupViewSet)
+api_router.register(r'lookup', LookupViewSet)
+api_router.register(r'media', MediaViewSet)
+api_router.register(r'epa_response', EPAResponseViewSet)
+api_router.register(r'facility_type', FacilityTypeViewSet)
+api_router.register(r'category_type', CategoryViewSet)
+api_router.register(r'survey123_field_type', Survey123FieldTypeViewSet)
+api_router.register(r'units', UnitViewSet)
+api_router.register(r'esri_field_types', ESRIFieldTypesViewSet)
+api_router.register(r'master_question', MasterQuestionViewSet)
+api_router.register(r'survey', SurveyViewSet)
+api_router.register(r'question_set', QuestionSetViewSet)
+api_router.register(r'question_list', QuestionListViewSet)
+api_router.register(r'survey_response', SurveyResponseViewSet)
+api_router.register(r'related_question_list', RelatedQuestionListViewSet)
+api_router.register(r'dashboard', DashboardViewSet)
 
 urlpatterns = [
     path(f'{settings.URL_PREFIX}webhook/', webhook),
     path(f'{settings.URL_PREFIX}oauth2/', include('social_django.urls', namespace='social_django')),
     path(f'{settings.URL_PREFIX}proxy/', EsriProxy.as_view()),
-    path(f'{settings.URL_PREFIX}', admin.site.urls),
+    path(f'{settings.URL_PREFIX}admin/', admin.site.urls),
+
+    path(f'{settings.URL_PREFIX}api/', include(api_router.urls)),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))
 ]
+
+# urlpatterns += api_router.urls
 
 if settings.DEBUG:
     import debug_toolbar
