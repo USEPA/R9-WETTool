@@ -1,0 +1,15 @@
+
+.breadcrumb li {
+  display: inline;
+}
+.breadcrumb li+li:before {
+  content: " > ";
+  color: white;
+}
+/*.breadcrumb{*/
+  /*background-color: #ff5549;*/
+  /*padding: 20px;}*/
+  a{
+    color: white;
+  }
+

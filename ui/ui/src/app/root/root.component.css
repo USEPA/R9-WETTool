@@ -1,0 +1,52 @@
+:host {
+  height: 100%;
+}
+
+.sidenav-content {
+  /*width:80vw;*/
+}
+
+.sidenav {
+  /*padding: 20px;*/
+}
+
+.sidenav > mat-list {
+  padding-top: 0;
+}
+
+.sidenav > mat-list > mat-list-item:hover {
+  background-color: lightgrey;
+  cursor: pointer;
+}
+
+.sidenav > mat-list > mat-list-item.active {
+  background-color: whitesmoke;
+  cursor: pointer;
+}
+
+.main-progress-bar {
+  min-height: 5px;
+  max-height: 5px;
+  margin-top: -5px;
+}
+
+.mat-toolbar-row {
+  height:48px !important;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.mat-input-element {
+    font: inherit;
+    background: 0 0;
+    color: currentColor;
+    border: none;
+    outline: 0;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    vertical-align: bottom;
+}
