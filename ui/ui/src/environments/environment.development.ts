@@ -5,4 +5,5 @@ export const environment = {
   admin_url: 'http://localhost:8000/admin',
   portal_base_url: 'https://gis.innovateteam.com/arcgis',
   default_base_map: '',
+  csrfCookieName: 'wettool_csrftoken',
 };
