@@ -2,8 +2,9 @@ import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable, ReplaySubject} from 'rxjs';
 import {tap} from 'rxjs/operators';
+import {environment} from "../../../environments/environment";
 
-interface UserConfig {
+export interface UserConfig {
   name: string;
   permissions: string[];
   is_superuser: boolean;
@@ -16,6 +17,7 @@ interface UserConfig {
 @Injectable({
   providedIn: 'root'
 })
+
 export class UserConfigService {
   config: ReplaySubject<any> = new ReplaySubject<UserConfig>();
   base_map_id: ReplaySubject<string> = new ReplaySubject<string>();
@@ -31,7 +33,7 @@ export class UserConfigService {
   }
 
   loadConfig(): Observable<any> {
-    return this.http.get(`/current_user/`).pipe(
+    return this.http.get(environment.service_url + '/current_user/').pipe(
       tap(config => this.config.next(config))
     );
   }
