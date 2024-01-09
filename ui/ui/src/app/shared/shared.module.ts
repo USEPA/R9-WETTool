@@ -8,18 +8,23 @@ import {MatDialogModule} from '@angular/material/dialog';
 import {MatTableModule} from '@angular/material/table';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatPaginatorModule} from '@angular/material/paginator';
+import {MatMenuModule} from '@angular/material/menu';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {BrowserAnimationsModule} from '@angular/platform-browser/animations';
 import {HttpClientModule} from '@angular/common/http';
 
-// import {BreadcrumbComponent} from './breadcrumb/breadcrumb.component';
+import {LoadingService} from './services/loading.service';
+import {UserConfigService} from './services/user-config.service';
+// import {BreadcrumbService} from './breadcrumb/breadcrumb.service';
+
+// import {BreadCrumbComponent} from './breadcrumb/breadcrumb.component';
 
 
 @NgModule({
   declarations: [
-    // BreadcrumbComponent,
+    // BreadCrumbComponent,
   ],
   imports: [
     CommonModule,
@@ -29,6 +34,7 @@ import {HttpClientModule} from '@angular/common/http';
     FormsModule,
     ReactiveFormsModule,
     MatFormFieldModule,
+    MatMenuModule,
     MatInputModule,
     HttpClientModule,
     MatDialogModule,
@@ -37,6 +43,12 @@ import {HttpClientModule} from '@angular/common/http';
     MatCheckboxModule,
     MatTooltipModule,
     BrowserAnimationsModule
+  ],
+  providers: [
+    // AuthService,
+    UserConfigService,
+    LoadingService,
+    // BreadcrumbService
   ]
 })
 export class SharedModule { }
