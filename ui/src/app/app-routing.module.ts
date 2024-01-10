@@ -1,9 +1,10 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import {HomeComponent} from "./home/home.component";
 
 const routes: Routes = [
   {
-    path: '', canActivateChild: [],
+    path: '', component: HomeComponent, canActivateChild: [],
     // data: {
     //   type: 'ptt',
     //   message: 'PTT Group'

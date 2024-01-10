@@ -11,17 +11,20 @@ import {MatListModule} from '@angular/material/list';
 import {MatIconModule} from "@angular/material/icon";
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
-import {AppComponent} from './app.component';
-import {AppRoutingModule} from './app-routing.module';
-import {SharedModule} from './shared/shared.module';
-
-
 import {environment} from '../environments/environment';
 import {TitleService} from './shared/services/title.service';
 
+import {AppRoutingModule} from './app-routing.module';
+import {SharedModule} from './shared/shared.module';
+import {AppComponent} from './app.component';
+import {HomeComponent} from './home/home.component';
+
+
+
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    HomeComponent
   ],
   imports: [
     BrowserModule,
