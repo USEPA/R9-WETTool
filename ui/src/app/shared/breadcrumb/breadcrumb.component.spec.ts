@@ -9,11 +9,11 @@ describe('BreadcrumbComponent', () => {
 
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
-      imports: [
+    imports: [
         RouterTestingModule
-      ],
-      declarations: [ BreadcrumbComponent ]
-    })
+    ],
+    declarations: [BreadcrumbComponent]
+})
     .compileComponents();
   }));
 
