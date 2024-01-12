@@ -1,6 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {Component, OnDestroy, OnInit} from '@angular/core';
-import {RouterModule} from '@angular/router';
+import {RouterLinkActive, RouterLink, RouterOutlet, RouterModule} from '@angular/router';
 import {HttpClient, HttpClientXsrfModule} from '@angular/common/http';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatSidenavModule} from '@angular/material/sidenav';
@@ -10,12 +10,9 @@ import {MatListModule} from '@angular/material/list';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {Subscription} from 'rxjs';
-import {tap} from 'rxjs/operators';
 
 // import {AuthService} from 'src/app/shared/services/auth.service';
 import {UserConfigService} from 'src/app/shared/services/user-config.service';
-// import {HomeComponent} from './home/home.component';
-import {environment} from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -24,7 +21,9 @@ import {environment} from '../environments/environment';
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
     HttpClientXsrfModule,
     MatSidenavModule,
     MatMenuModule,

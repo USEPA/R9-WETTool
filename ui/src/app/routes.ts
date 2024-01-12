@@ -1,32 +1,31 @@
-import {Routes} from '@angular/router';
-import {AppComponent} from "./app.component";
+import {Routes, ResolveFn, ActivatedRouteSnapshot, RouterStateSnapshot} from '@angular/router';
 import {HomeComponent} from './home/home.component';
-import {QuestionlistComponent} from "./questionlist/questionlist.component";
-import {UserConfigService} from "./shared/services/user-config.service";
+import {QuestionListComponent} from './question-list/question-list.component';
+import {QuestionDetailsComponent} from "./question-details/question-details.component";
+
+// const resolvedTitle = 'asdf';
+// const resolvedTitle: ResolveFn<string> = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {return inject(TitleService).getTitle()};
 
 const routeConfig: Routes = [
   {
     path: '',
     component: HomeComponent,
     title: 'R9 WET Tool',
-  },
-  {
-    path: 'home',
-    component: HomeComponent,
-    title: 'Home'
+    // title: resolvedTitle
   },
   {
     path: 'questions',
-    component: QuestionlistComponent,
-    title: 'Question List',
     children: [
-      // {
-      //   path:'/:id',
-      //   component: QuestionDetialComponnent,
-      //   title: 'Question Details',
-      // }
+      { path:'',
+        component: QuestionListComponent,
+        title: 'Question List',
+      },
+      { path:':id',
+        component: QuestionDetailsComponent,
+        title: 'Question Details',
+      }
     ]
-  }
+  },
 ];
 
 export default routeConfig;
