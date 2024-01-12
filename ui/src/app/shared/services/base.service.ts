@@ -28,8 +28,8 @@ interface FilterOptions {
 }
 
 export class BaseService {
-  currentPage: number;
-  count: number;
+  currentPage: number = 1;
+  count: number = 0;
   dataChange: BehaviorSubject<any[]> = new BehaviorSubject<any[]>([]);
   fullResponse: Subject<any> = new Subject<any>();
   filter: SearchObject;
@@ -109,12 +109,12 @@ export class BaseService {
     );
   }
 
-  getPage(event) {
-    this.loadingService.setLoading(true);
-    this.filter.page = event.pageIndex + 1;
-    this.filter.page_size = event.pageSize;
-    this.getItems().subscribe(() => this.loadingService.setLoading(false));
-  }
+  // getPage(event) {
+  //   this.loadingService.setLoading(true);
+  //   this.filter.page = event.pageIndex + 1;
+  //   this.filter.page_size = event.pageSize;
+  //   this.getItems().subscribe(() => this.loadingService.setLoading(false));
+  // }
 
   runSearch() {
     this.loadingService.setLoading(true);
@@ -134,14 +134,14 @@ export class BaseService {
     ).subscribe();
   }
 
-  sortTable(event) {
-    // this.loadingService.setLoading(true);
-    this.filter.page = 1;
-    const direction = event.direction === 'desc' ? '-' : '';
-    this.filter.ordering = event.direction ? `${direction}${event.active}` : '';
-    this.getItems()
-      .subscribe(() => this.loadingService.setLoading(false));
-  }
+  // sortTable(event) {
+  //   // this.loadingService.setLoading(true);
+  //   this.filter.page = 1;
+  //   const direction = event.direction === 'desc' ? '-' : '';
+  //   this.filter.ordering = event.direction ? `${direction}${event.active}` : '';
+  //   this.getItems()
+  //     .subscribe(() => this.loadingService.setLoading(false));
+  // }
 
   delete(id: string | number) {
     return this.http.delete(`/${this.base_url}/${id}`)
@@ -168,7 +168,7 @@ export class BaseService {
     }
   }
 
-  clearFilter(field): void {
+  clearFilter(field:string): void {
     delete this.filter[field];
     this.getAllFilterOptions();
   }
@@ -187,8 +187,8 @@ export class BaseService {
 
   public updateQueryParams(queryParam: Params, router: Router, route: ActivatedRoute): void {
     // remove highlight so it only happens once
-    if (queryParam.highlight) {
-      queryParam.highlight = null;
+    if (queryParam['highlight']) {
+      queryParam['highlight'] = null;
     }
     if (router) {
       router.navigate(
@@ -201,46 +201,21 @@ export class BaseService {
   public applyQueryParams(params: ParamMap): ParamMap {
     for (const key of params.keys) {
       // tslint:disable-next-line:radix
-      const value = parseInt(params.get(key));
+      const value = parseInt(<string>params.get(key));
       this.filter[key] = value ? value : params.get(key);
       if (key.includes('__in')) {
-        const numbersCheck = params.get(key).split(',').map(x => +x);
-        if (numbersCheck.some(isNaN)) {
-          this.filter[key] = params.get(key).split(',');
+        const values = params.get(key)!.split(',');
+        if (values.map(x => +x).some(isNaN)) {
+          this.filter[key] = values;
         } else {
-          this.filter[key] = params.get(key).split(',').map(x => +x);
+          this.filter[key] = values.map(x => +x);
         }
       }
       if (params.get(key) === 'true') { this.filter[key] = true; }
       if (params.get(key) === 'false') { this.filter[key] = false; }
-      if (key === 'requestor' && params.get(key)) {
-        this.requestorChanged({id: params.get(key)});
-      }
-      if (key === 'analyst' && params.get(key)) {
-        this.assignedToChanged({id: params.get(key)});
-      }
     }
     return params;
   }
-
-  assignedToChanged(value): void {
-    if (value) {
-      this.assignedToValue = value.id;
-      this.filter.analyst = value.id;
-    } else {
-      delete this.filter.analyst;
-    }
-  }
-
-  requestorChanged(value): void {
-    if (value) {
-      this.requestorValue = value.id;
-      this.filter.requestor = value.id;
-    } else {
-      delete this.filter.requestor;
-    }
-  }
-
 }
 
 export class BaseDataSource extends DataSource<any> {

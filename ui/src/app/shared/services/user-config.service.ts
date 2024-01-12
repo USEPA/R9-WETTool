@@ -33,7 +33,7 @@ export class UserConfigService {
   }
 
   loadConfig(): Observable<any> {
-    return this.http.get(environment.service_url + '/current_user/').pipe(
+    return this.http.get( 'api/current_user/').pipe(
       tap(config => this.config.next(config))
     );
   }
