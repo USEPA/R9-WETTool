@@ -1,4 +1,5 @@
 import requests
+import json
 from django.conf import settings
 from django.contrib.auth.models import User
 from pandas import DataFrame
@@ -51,6 +52,7 @@ def get_token():
         raise Exception('AGOL Token expired')
     return token
 
+
 def get_latest_assessment_responses(group_by_field, assessment_responses, current_responses):
     group_by_fields = ['question', group_by_field]
     adds, updates = [], []
@@ -85,3 +87,19 @@ def get_edit_date(feature, eventType, received_timestamp):
         # todo: check payload detail to determine correct edit date field
         return feature['attributes']['EditDate']
     return received_timestamp
+
+
+def get_service_config(service, user):
+    layers = []
+    tables = []
+    social = user.social_auth.get(provider='agol')
+    token = social.get_access_token(load_strategy())
+    r = requests.get(url=service, params={'token': token, 'f': 'json'})
+    for x in r.json()['layers']:
+        q = requests.get(url=service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
+        layers.append(q.json())
+    for x in r.json()['tables']:
+        q = requests.get(url=service + '/' + str(x['id']), params={'token': token, 'f': 'json'})
+        tables.append(q.json())
+
+    return json.dumps({"layers": layers, "tables": tables})

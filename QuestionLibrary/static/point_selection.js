@@ -24,7 +24,7 @@
                 tempGraphicsLayer.listMode = 'hide';
                 var references = new VectorTileLayer("https://www.arcgis.com/sharing/rest/content/items/30d6b8271e1849cd9c3042060001f425/resources/styles/root.json");
                 references.listMode = 'hide';
-                var base_service = document.getElementById('id_base_map_service').value;
+                var base_service = document.getElementById('id_base_service_url').textContent;
                 const fl_node = document.getElementById('id_layer');
 
                 var editGraphic;
@@ -45,7 +45,7 @@
                 }
                 function renderMap() {
                     parseLayers();
-                    if (document.getElementById('id_base_map_service').value) {
+                    if (base_service) {
                         let fl = flayers[fl_node.options.selectedIndex];
                         // var fl = new FeatureLayer({
                         //     url: base_service + "/1"
@@ -159,7 +159,7 @@
                 }
 
                 function getFeatures(featureLayer) {
-                    featureLayer.queryFeatures({"where": "include=1", "outFields": "*"}).then(function (featureSet) {
+                    featureLayer.queryFeatures({"where": "1=1", "outFields": "*"}).then(function (featureSet) {
                         // todo: deal with getting more features if max returned
                         allFeatures = allFeatures.concat(featureSet.features);
                         var features = featureSet.features.map(f => f.attributes);

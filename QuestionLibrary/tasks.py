@@ -44,22 +44,22 @@ def set_survey_to_submitted(payload):
 
 
 @actor()
-def get_submitted_responses(survey_service, token):
+def get_submitted_responses(survey123_service_url, token):
     token = get_token()
-    response = requests.get(f"{survey_service}/0/query",
+    response = requests.get(f"{survey123_service_url}/0/query",
                             params={"where": "survey_status = 'submitted'", "outFields": "*", "token": token,
                                     "f": "json"})
     response.raise_for_status()
     r_json = response.json()
     if 'error' in r_json:
         # log but don't retry
-        logger.error(response.content)
+        logger.error(['get_submitted_responses', response.content])
 
     return r_json.get('features', [])
 
 
 @actor()
-def process_response_features(survey_base_map_service, survey_service_config, survey_layer, token, eventType,
+def process_response_features(survey_base_map_service_url, survey_service_config, survey_layer, token, eventType,
                               response_features):
     try:
         token = get_token() # override for now
@@ -94,21 +94,21 @@ def process_response_features(survey_base_map_service, survey_service_config, su
             # ignore eventType and always check?? based on what? if someone can enter then what happens...
             # we need to pass global id from base into surveys and return back... if base globalid not populated then its new...?
 
-            r = requests.post(f"{survey_base_map_service}/{layer['id']}/applyEdits",
+            r = requests.post(f"{survey_base_map_service_url}/{layer['id']}/applyEdits",
                               params={'token': token, 'f': 'json'},
                               data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
             if 'error' in r.json():
                 # log but don't retry
-                logger.error([r.content, data])
+                logger.error(['process_response_features', r.content, data])
 
         return response_features  # pass through pipeline so load_responses can run on these responses
     except Exception as e:
-        logger.error(response_features)
+        logger.error(['process_response_features', response_features])
         raise e
 
 
 @actor()
-def load_responses(survey_base_map_service, survey_service_config, survey_assessment_layer, token, eventType, received_timestamp, response_features):
+def load_responses(survey_base_map_service_url, survey_service_config, system_layer_id, facility_layer_id, assessment_table_id, token, eventType, received_timestamp, response_features):
     try:
         token = get_token() # override for now
         # updated_features = [{'surveyInfo': payload['surveyInfo']}, {'userInfo': payload['userInfo']}]
@@ -120,14 +120,12 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
         # not sure if we will need origin_feature at any point
         # origin_feature = {'attributes': payload['feature'].get('attributes'), 'geometry': payload['feature'].get('geometry', None)}
 
-        table = next(x for x in json.loads(survey_service_config)['tables'] if x['id'] == int(survey_assessment_layer))
+        table = next(x for x in json.loads(survey_service_config)['tables'] if x['id'] == int(assessment_table_id))
         assessment_responses = []
         for response_feature in response_features:
             fac_id = None
-            if fac_id is None and response_feature['attributes'].get('layer_1_FacilityID') is not None:
-                fac_id = response_feature['attributes']['layer_1_FacilityID']
-            else:
-                fac_id = None
+            if response_feature['attributes'].get(f'layer_{facility_layer_id}_FacilityID') is not None:
+                fac_id = response_feature['attributes'][f'layer_{facility_layer_id}_FacilityID']
             master_questions = {q.formatted_survey_field_name: q for q in MasterQuestion.objects.all()}
             for k, v in response_feature['attributes'].items():
                 if not k.startswith('layer'):
@@ -141,7 +139,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                                 'response': v,
                                 'units': units,
                                 'facility_id': fac_id,
-                                'system_id': response_feature['attributes'].get('layer_0_pws_fac_id', None),
+                                'system_id': response_feature['attributes'].get(f'layer_{system_layer_id}_pws_fac_id', None),
                                 'EditDate': get_edit_date(response_feature, eventType, received_timestamp),
                                 'display_name': f"{v} {units}"
                             })
@@ -161,7 +159,7 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
                             'question': master_questions[k].question,
                             'response': v,
                             'facility_id': fac_id,
-                            'system_id': response_feature['attributes'].get('layer_0_pws_fac_id', None),
+                            'system_id': response_feature['attributes'].get(f'layer_{system_layer_id}_pws_fac_id', None),
                             'display_name': v_decoded,
                             'EditDate': get_edit_date(response_feature, eventType, received_timestamp)
                         })
@@ -170,8 +168,8 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
             'system_id': [x for x in assessment_responses if x['facility_id'] is None]
         }
         captured_responses = {
-            'facility_id': get_all_features(f"{survey_base_map_service}/{table['id']}", token, "facility_id is not null"),
-            'system_id': get_all_features(f"{survey_base_map_service}/{table['id']}", token, "facility_id is null")
+            'facility_id': get_all_features(f"{survey_base_map_service_url}/{table['id']}", token, "facility_id is not null"),
+            'system_id': get_all_features(f"{survey_base_map_service_url}/{table['id']}", token, "facility_id is null")
         }
         updates, adds = [], []
         for field, assessment_responses in pre_grouped_assessments.items():
@@ -180,13 +178,13 @@ def load_responses(survey_base_map_service, survey_service_config, survey_assess
             updates += u
 
         data = {'adds': json.dumps(adds), 'updates': json.dumps(updates)}
-        r = requests.post(f"{survey_base_map_service}/{table['id']}/applyEdits",
+        r = requests.post(f"{survey_base_map_service_url}/{table['id']}/applyEdits",
                           params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
         if 'error' in r.json():
-            logger.error(response_features)
+            logger.error(['load_responses error', r.json(), response_features])
     except Exception as e:
-        logger.error(response_features)
+        logger.error(['load_responses exception', response_features])
         raise e
 
 
@@ -199,12 +197,12 @@ def load_surveys(service_url, token, features):
                              data={"where": "survey_status is null"},
                              headers={'Content-type': 'application/x-www-form-urlencoded'})
     if 'error' in delete_r.json():
-        logger.error(delete_r.content)
+        logger.error(['load_surveys', delete_r.content])
 
     add_r = requests.post(url=f'{service_url}/0/applyEdits', params={'token': token, 'f': 'json'},
                           data=data, headers={'Content-type': 'application/x-www-form-urlencoded'})
     if 'error' in add_r.json():
-        logger.error(add_r.content)
+        logger.error(['load_surveys', add_r.content])
 
 
 @actor()
@@ -212,7 +210,7 @@ def get_features_to_load(survey_pk, token):
     token = get_token()  # override for now
     survey = Survey.objects.get(pk=survey_pk)
     features = []
-    service_config_layers = json.loads(survey.service_config)['layers']
+    service_config_layers = json.loads(survey.epa_response.map_service_config)['layers']
     # get layers that serve a origin in relationship
     # origin_layers = [x for x in service_config_layers if
     #                  x['id'] = survey.layer]
@@ -243,7 +241,7 @@ def get_features_to_load(survey_pk, token):
 
             params = {'token': token,
                       'f': 'json'}
-            q = requests.post(url=survey.base_map_service + '/' + str(survey.layer) + '/query',
+            q = requests.post(url=survey.epa_response.map_service_url + '/' + str(survey.layer) + '/query',
                               params=params, data=data)
             layer_name = origin_layer['name']
 
@@ -259,7 +257,7 @@ def get_features_to_load(survey_pk, token):
                 params = {'token': token,
                           'f': 'json'}
                 related_responses[related_layer['id']] = requests.post(
-                    url=survey.base_map_service + '/' + str(survey.layer) + '/queryRelatedRecords',
+                    url=survey.epa_response.map_service_url + '/' + str(survey.layer) + '/queryRelatedRecords',
                     params=params, data=data)
 
                 # deconstruct the queryRelatedRecords response for easier handling since we only have 1 objectid at a time
@@ -288,7 +286,7 @@ def get_features_to_load(survey_pk, token):
                 # set default values for survey123 questions for existing features from base data
                 for question_set in survey.question_set.all():
                     for question in question_set.questions.all():
-                        if question.relevant_for_feature(feature, survey.layer) and question.default_unit is not None:
+                        if question.relevant_for_feature(feature, survey) and question.default_unit is not None:
                             feature['attributes'][
                                 f'{question.formatted_survey_field_name}_choices'] = question.default_unit.description
 
@@ -329,4 +327,4 @@ def approve_draft_dashboard_service(base_service_url, draft_service_url, approve
                                              data=data,
                                              headers={'Content-type': 'application/x-www-form-urlencoded'})
     if "error" in update_features_response.json():
-        logger.error(update_features_response.content)
+        logger.error(['approve_draft_dashboard_service', update_features_response.content])
