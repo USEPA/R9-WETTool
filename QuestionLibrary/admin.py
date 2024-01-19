@@ -260,15 +260,17 @@ class RelatedQuestionInlineForm(forms.ModelForm):
 
         if self.instance.question_id is not None:
             self.fields['relevant_field'].queryset = Lookup.objects.filter(group=self.instance.question.lookup)
-
-    class Meta:
-        widgets = {
-            'related': AutocompleteSelect(
-                MasterQuestion.related_questions.through._meta.get_field('related').remote_field,
-                admin.site,
-                attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
-            ),
-        }
+        for f, v in self.fields.items():
+            if self.fields[f].widget.widget and isinstance(self.fields[f].widget.widget, AutocompleteSelect):
+                self.fields[f].widget.widget.attrs = {'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
+    # class Meta:
+    #     widgets = {
+    #         'related': AutocompleteSelect(
+    #             MasterQuestion.related_questions.through._meta.get_field('related').remote_field,
+    #             admin.site,
+    #             attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
+    #         ),
+    #     }
 
 
 class MasterQuestionRelatedQuestionInline(admin.TabularInline):
@@ -349,6 +351,9 @@ class SurveyAdmin(admin.ModelAdmin):
 class QuestionSetInlineForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(QuestionSetInlineForm, self).__init__(*args, **kwargs)
+        for f, v in self.fields.items():
+            if hasattr(self.fields[f], 'widget') and hasattr(self.fields[f].widget, 'widget') and isinstance(self.fields[f].widget.widget, AutocompleteSelect):
+                self.fields[f].widget.widget.attrs = {'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
         # self.fields['default_unit'].queryset = Lookup.objects.filter(group=self.instance.lookup)
         # self.fields['facility_type'].queryset = FacilityType.objects.none()
         # if self.instance.category_id is not None:
@@ -358,14 +363,14 @@ class QuestionSetInlineForm(forms.ModelForm):
         #     except (ValueError, TypeError):
         #         pass
 
-    class Meta:
-        widgets = {
-            'question': AutocompleteSelect(
-                QuestionSet.questions.through._meta.get_field('question').remote_field,
-                admin.site,
-                attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
-            ),
-        }
+    # class Meta:
+    #     widgets = {
+    #         'question': AutocompleteSelect(
+    #             QuestionSet.questions.through._meta.get_field('question').remote_field,
+    #             admin.site,
+    #             attrs={'data-dropdown-auto-width': 'true', 'style': 'width: 800px;'}
+    #         ),
+    #     }
 
 
 class QuestionSetInline(admin.TabularInline):
