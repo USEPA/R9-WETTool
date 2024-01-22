@@ -97,6 +97,10 @@ class EPAResponse(models.Model):
             if 'layers' in config:
                 return 'Configuration Downloaded'
 
+    def get_layer_geometry_type(self, layer_id):
+        config = json.loads(self.map_service_config)
+        return config['layers'][layer_id]['geometryType']
+
     class Meta:
         verbose_name = "EPA Response"
 
@@ -203,7 +207,8 @@ class MasterQuestion(models.Model):
                 return f"${{layer_{layer_id}_media}}='{self.media.description}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
             if r is not None and self.facility_type is not None and self.media is not None:
                 return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
-        if self.facility_type is not None and self.media is not None and int(layer_id) != survey.epa_response.system_layer_id:
+        if self.facility_type is not None and self.media is not None and int(
+                layer_id) != survey.epa_response.system_layer_id:
             return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
         else:
             return f"${{layer_{layer_id}_media}}='{self.media.description}'"
@@ -382,14 +387,18 @@ class Survey(models.Model):
             layer = [{
                 'form_title': self.name,
                 'form_id': '',
-                'instance_name': 'concat("System Name: "+${layer_'+str(self.layer)+'_SystemName}, " ", "System Status: " + ${layer_'+str(self.layer)+'_ActivityStatus})',
+                'instance_name': 'concat("System Name: "+${layer_' + str(
+                    self.layer) + '_SystemName}, " ", "System Status: " + ${layer_' + str(
+                    self.layer) + '_ActivityStatus})',
                 'style': 'theme-grid'
             }]
         else:
             layer = [{
                 'form_title': self.name,
                 'form_id': '',
-                'instance_name': 'concat("Facility Name: "+${layer_'+str(self.layer)+'_FacilityName}, " ", "Facility ID: " + ${layer_'+str(self.layer)+'_FacilityID}, " ", "Facility Type: " + ${layer_'+str(self.layer)+'_Fac_Type})',
+                'instance_name': 'concat("Facility Name: "+${layer_' + str(
+                    self.layer) + '_FacilityName}, " ", "Facility ID: " + ${layer_' + str(
+                    self.layer) + '_FacilityID}, " ", "Facility Type: " + ${layer_' + str(self.layer) + '_Fac_Type})',
                 'style': 'theme-grid'
             }]
 
@@ -401,17 +410,14 @@ class Survey(models.Model):
             'label': 'Survey Status'}]
         status_df = pd.DataFrame(survey_status)
 
-        geopoint = [{
-            'type': 'geopoint',
-            'name': 'geometry',
-            'label': 'Edit Geometry'}]
-        geopoint_df = pd.DataFrame(geopoint)
+        geometry = self.generate_geometry_field()
+        geometry_df = pd.DataFrame(geometry)
 
         questions = self.get_assigned_questions()
         formatted_questions = self.format_questions(questions)
         questions_df = pd.DataFrame(formatted_questions)
         # all_questions_df = [questions_df, status_df]
-        survey_df_all = [field_df, questions_df, status_df, geopoint_df]
+        survey_df_all = [field_df, questions_df, status_df, geometry_df]
         survey_df = orig_survey_df.append(survey_df_all)
 
         choices = self.get_assigned_lookups(questions)
@@ -460,7 +466,8 @@ class Survey(models.Model):
             if layer['id'] == self.epa_response.system_layer_id:
                 survey_fields.append({'type': 'begin group',
                                       'name': 'sys_info',
-                                      'label': '<h2 style="background-color:#3295F7; text-align:center;">System Name: ${layer_' + str(layer['id']) + '_SystemName}<br/>' +
+                                      'label': '<h2 style="background-color:#3295F7; text-align:center;">System Name: ${layer_' + str(
+                                          layer['id']) + '_SystemName}<br/>' +
                                                'System ID: ${layer_' + str(layer['id']) + '_pws_fac_id}</h2>',
                                       'appearance': 'w1 field-list'})
                 for field in layer['fields']:
@@ -486,7 +493,8 @@ class Survey(models.Model):
             elif layer['id'] == self.epa_response.facility_layer_id:
                 survey_fields.append({'type': 'begin group',
                                       'name': 'facility_info',
-                                      'label': '<h2 style="background-color:#00C52A; text-align:center;">Facility Name: ${layer_' + str(layer['id']) + '_FacilityName}<br/>' +
+                                      'label': '<h2 style="background-color:#00C52A; text-align:center;">Facility Name: ${layer_' + str(
+                                          layer['id']) + '_FacilityName}<br/>' +
                                                'Facility ID: ${layer_' + str(layer['id']) + '_FacilityID}</h2>',
                                       'appearance': 'w1 field-list'})
                 for field in layer['fields']:
@@ -514,7 +522,8 @@ class Survey(models.Model):
         feat_service = json.loads(self.epa_response.map_service_config)['layers']
         survey_fields = [{'type': 'begin group',
                           'name': 'sys_info',
-                          'label': '<h2 style="background-color:#3295F7; text-align:center;">System Name: ${layer_' + str(layer_id) + '_SystemName} System ID: ${layer_' + str(layer_id) + '_pws_fac_id}</h2>',
+                          'label': '<h2 style="background-color:#3295F7; text-align:center;">System Name: ${layer_' + str(
+                              layer_id) + '_SystemName} System ID: ${layer_' + str(layer_id) + '_pws_fac_id}</h2>',
                           'appearance': 'w1 field-list'}]
 
         omit_fields = {'created_user', 'created_date', 'AlternateTextID',
@@ -536,6 +545,19 @@ class Survey(models.Model):
 
     class Meta:
         verbose_name = "Assessment"
+
+    def generate_geometry_field(self):
+        layer_geometry_type = self.epa_response.get_layer_geometry_type(self.layer)
+        _type = 'geopoint'  # fall back to point if no match
+        if layer_geometry_type == 'esriGeometryPolyline':
+            _type = 'geotrace'
+        elif layer_geometry_type == 'esriGeometryPolygon':
+            _type = 'geoshape'
+
+        return [{
+            'type': _type,
+            'name': 'geometry',
+            'label': 'Edit Geometry'}]
 
 
 # todo: figure out how to publish survey123. it might have to be manual
@@ -594,8 +616,10 @@ class Dashboard(models.Model):
 
     @property
     def view_draft(self):
-        return mark_safe(f'<a target="_blank" href="https://www.arcgis.com/apps/dashboards/{self.draft_id.hex}">View {self.name} Draft</a>')
+        return mark_safe(
+            f'<a target="_blank" href="https://www.arcgis.com/apps/dashboards/{self.draft_id.hex}">View {self.name} Draft</a>')
 
     @property
     def view_production(self):
-        return mark_safe(f'<a target="_blank" href="https://www.arcgis.com/apps/dashboards/{self.production_id.hex}">View {self.name} Production</a>')
+        return mark_safe(
+            f'<a target="_blank" href="https://www.arcgis.com/apps/dashboards/{self.production_id.hex}">View {self.name} Production</a>')
