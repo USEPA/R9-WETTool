@@ -27,9 +27,9 @@ node {
     //         }
     //     }
        }
-        stage("Approval") {
+        stage("Done") {
             slackSend(channel:"#r9-wet-tool-alerts", message: "WET Tool Staging Build COMPLETE")
-            input(message: "Approved for merge?")
+//             input(message: "Approved for merge?")
             // todo: revert migrations on abort
         }
 
