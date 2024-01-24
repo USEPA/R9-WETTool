@@ -22,7 +22,7 @@ from QuestionLibrary.func import formattedFieldName, get_service_config
 
 
 class LookupAbstract(models.Model):
-    label = models.CharField(max_length=50, help_text='like this')
+    label = models.CharField(max_length=50, help_text='This will be what users see.')
     description = models.CharField(max_length=500, null=True, blank=True)
 
     def __str__(self):
@@ -202,16 +202,21 @@ class MasterQuestion(models.Model):
     #             return f"$selected(${r.question}, {r.relevant_field})"
 
     def formatted_survey_category_field_relevant(self, survey, layer_id):
+        relevant = []
+        # media always relevant unless All selected
+        relevant.append(
+            f"${{layer_{layer_id}_media}}='{self.media.description}'" if self.media.description != 'All' else '')
         for r in RelatedQuestionList.objects.filter(related_id__pk=self.id):
             if r is not None:
-                return f"${{layer_{layer_id}_media}}='{self.media.description}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
-            if r is not None and self.facility_type is not None and self.media is not None:
-                return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}' and selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")"
-        if self.facility_type is not None and self.media is not None and int(
-                layer_id) != survey.epa_response.system_layer_id:
-            return f"${{layer_{layer_id}_media}}='{self.media.description}' and ${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'"
-        else:
-            return f"${{layer_{layer_id}_media}}='{self.media.description}'"
+                relevant.append(
+                    f"selected(${{{r.question.formatted_survey_field_name}}}, \"{r.relevant_field.label}\")")
+                break
+
+        # if facility type is populated use it if this question is not being used in system layer
+        if self.facility_type is not None and int(layer_id) != survey.epa_response.system_layer_id:
+            relevant.append(f"${{layer_{layer_id}_Fac_Type}}='{self.facility_type.fac_code}'")
+
+        return ' and '.join(relevant)
 
     def relevant_for_feature(self, feature, survey):
         layer_id = survey.layer
@@ -227,7 +232,7 @@ class MasterQuestion(models.Model):
     def get_formatted_required(self, required):
         return "true" if required else "false"
 
-    def get_formatted_question(self, survey, layer_index, required):
+    def get_formatted_question(self, survey, layer_index, _required):
         # must always return a list
         if self.lookup is not None and self.survey123_field_type.field_type != 'select_one':
             return [
@@ -253,12 +258,17 @@ class MasterQuestion(models.Model):
                 }
             ]
 
+        relevant = self.formatted_survey_category_field_relevant(survey, layer_index)
+        required = [self.get_formatted_required(_required)]
+        if relevant:
+            required.append(relevant)
+
         q = [{
             'type': self.formatted_survey_field_type.lower(),
             'name': self.formatted_survey_field_name,
             'label': self.question,
-            'relevant': f"{self.formatted_survey_category_field_relevant(survey, layer_index)}",
-            'required': f"{self.formatted_survey_category_field_relevant(survey, layer_index)} and {self.get_formatted_required(required)}",
+            'relevant': relevant,
+            'required': ' and '.join(required),
         }]
 
         return q
