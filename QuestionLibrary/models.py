@@ -157,8 +157,7 @@ class MasterQuestion(models.Model):
                                  help_text='Leaving category type empty will apply the question to ALL category types.')
     facility_type = models.ForeignKey('FacilityType', on_delete=models.PROTECT, null=True, blank=True,
                                       help_text='Leaving facility type empty will apply the question to ALL facility types.')
-    survey123_field_type = models.ForeignKey('Survey123FieldType', on_delete=models.PROTECT, null=True, blank=True,
-                                             verbose_name='Survey123 Field Type')
+    survey123_field_type = models.ForeignKey('Survey123FieldType', on_delete=models.PROTECT, verbose_name='Survey123 Field Type')
     lookup = models.ForeignKey('LookupGroup', on_delete=models.PROTECT, null=True, blank=True,
                                verbose_name='Answer Type')
     # todo: triggers creation of second field for survey generation if not none

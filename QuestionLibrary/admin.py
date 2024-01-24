@@ -214,11 +214,11 @@ class QuestionFieldVal(ModelForm):
         #         self.fields['lookup'].required = True
 
     def clean_lookup(self):
-        survey123_field_type = self.cleaned_data['survey123_field_type'] if hasattr(self, 'cleaned_data') else getattr(self.instance,
+        survey123_field_type = self.cleaned_data.get('survey123_field_type', None) if hasattr(self, 'cleaned_data') else getattr(self.instance,
                                                                                                                        'survey123_field_type',
                                                                                                                        None)
 
-        if survey123_field_type.label == 'select_one':
+        if survey123_field_type is not None and survey123_field_type.label == 'select_one':
             if self.cleaned_data['lookup'] is None:
                 raise ValidationError('Lookup required if Field Type is select_one.')
         return self.cleaned_data.get('lookup', None)
