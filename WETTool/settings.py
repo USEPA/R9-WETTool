@@ -209,7 +209,7 @@ LOGGING['loggers']['dramatiq'] = {'handlers': ['console', 'slack', 'drama_file']
 DRAMATIQ_BROKER = {
     "BROKER": "dramatiq.brokers.rabbitmq.RabbitmqBroker",
     "OPTIONS": {
-        "url": "amqp://localhost:5672",
+        "url": getattr(local_settings, 'RABBITMQ_URL', "amqp://localhost:5672"),
     },
     "MIDDLEWARE": [
         "dramatiq.middleware.AgeLimit",
