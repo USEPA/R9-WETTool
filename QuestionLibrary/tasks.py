@@ -297,8 +297,8 @@ def get_features_to_load(survey_pk, token):
     return features
 
 
-@actor
-def approve_draft_dashboard_service(base_service_url, draft_service_url, approved_service_url):
+@actor()
+def approve_draft_dashboard_service(base_service_url, draft_service_url, approved_service_url, token):
     token = get_token()
     # prep removing current features
     current_features_json = get_all_features(approved_service_url, token)

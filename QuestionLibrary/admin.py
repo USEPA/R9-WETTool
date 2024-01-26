@@ -396,8 +396,7 @@ def approve_dashboard(modeladmin, request, queryset):
         pipeline([
             approve_draft_dashboard_service.message(dashboard.base_feature_service,
                                                     dashboard.draft_service_view,
-                                                    dashboard.production_service_view,
-                                                    token)
+                                                    dashboard.production_service_view)
         ]).run()
 
         messages.success(request, 'Approving dashboard')
