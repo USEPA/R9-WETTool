@@ -56,7 +56,7 @@
                         mapDiv.innerHTML = "";
                         var myMap = new Map({
                             basemap: 'satellite',
-                            layers:  flayers.concat([references, tempGraphicsLayer])
+                            layers: flayers.concat([references, tempGraphicsLayer])
                         });
                         view = new MapView({
                             map: myMap,
@@ -67,7 +67,7 @@
                             getFeatures(fl);
                         });
                         var layerlist = new LayerList({
-                          view: view,
+                            view: view,
                             // listItemCreatedFunction: function(event) {
                             //   var item = event.item;
                             //   item.title = item.title.replace('WET_Tool_BASE', '');
@@ -140,22 +140,20 @@
                 }
 
 
-
-
                 var gridOptions;
 
                 function parseLayers() {
                     flayers = [];
-                    for (let i=0; i<fl_node.options.length; i++){
+                    for (let i = 0; i < fl_node.options.length; i++) {
                         const ii = (i).toString();
                         const f = new FeatureLayer({
-                            url: base_service + "/"+ii,
+                            url: base_service + "/" + ii,
                             title: fl_node.options[i].innerText,
-                            listMode: i !== fl_node.options.selectedIndex?"show":"hide"
+                            listMode: i !== fl_node.options.selectedIndex ? "show" : "hide"
                         });
                         flayers.push(f);
                     }
-                //     todo - update layer list
+                    //     todo - update layer list
                 }
 
                 function getFeatures(featureLayer) {
@@ -165,13 +163,13 @@
                         var features = featureSet.features.map(f => f.attributes);
                         // todo - remove unnecessary fields from Base Inventory if Base Inventory
                         var columnDefs = featureSet.fields
-                        //.filter(f => ! ['OBJECTID','created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name))
+                            //.filter(f => ! ['OBJECTID','created_date', 'created_user', 'last_edited_user', 'last_edited_date'].includes(f.name))
                             .map(f => {
                                 var columnDef = {"headerName": f.alias, "field": f.name};
                                 if (['OBJECTID', 'created_date', 'created_user', 'last_edited_user', 'last_edited_date', 'AlternateTextID', 'SystemTextIDPublic', 'pws_fac_id'].includes(f.name)) {
                                     columnDef['hide'] = true;
                                 }
-                                if(f.alias) return columnDef;
+                                if (f.alias) return columnDef;
                             });
                         gridOptions = {
                             defaultColDef: {
@@ -202,24 +200,28 @@
                 }
 
                 function selectFeaturesByGeometry(geometry, remove) {
-                    flayers[fl_node.options.selectedIndex].queryObjectIds({geometry, spatialRelationship: 'contains'}).then(function (ids) {
-                        selectFeatures(ids, remove);
+                    flayers[fl_node.options.selectedIndex].queryObjectIds({
+                        geometry,
+                        spatialRelationship: 'contains'
+                    }).then(function (ids) {
+                        var current_selection = getCurrentSelection()
+                        var new_selection = remove ? current_selection.filter(id => !ids.includes(id)): Array.from(new Set(current_selection.concat(ids)));
+                        gridOptions.api.forEachNode(function (node) {
+                            node.setSelected(new_selection.includes(node.data.OBJECTID));
+                        });
                     });
                 }
 
-                function selectFeatures(selectedRows) {
-                    // var current_selection = getCurrentSelection();
+                function selectFeatures() {
                     var new_selection = gridOptions.api.getSelectedRows().map(x => x.OBJECTID);
                     document.getElementById('id_selected_features').value = [...new_selection].join(',');
                     highlightFeatures();
                 }
 
                 var highlight;
+
                 function highlightFeatures() {
                     var current_selection = getCurrentSelection();
-                    gridOptions.api.forEachNode(function (node) {
-                        node.setSelected(current_selection.includes(node.data.OBJECTID));
-                    });
 
                     view.whenLayerView(flayers[fl_node.options.selectedIndex]).then(layerView => {
                         if (highlight) {
