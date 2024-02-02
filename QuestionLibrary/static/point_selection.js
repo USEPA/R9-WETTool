@@ -37,12 +37,14 @@
 
                 // Create a MapView instance (for 2D viewing) and reference the map instance
                 fl_node.onchange = changeFeatureLayer;
+
                 function changeFeatureLayer() {
                     // update focus fl
                     // redraw map, clear selection (get current)
                     // redraw table
                     renderMap();
                 }
+
                 function renderMap() {
                     parseLayers();
                     if (base_service) {
@@ -185,10 +187,12 @@
                             rowData: features,
                             onFirstDataRendered: function (e) {
                                 e.columnApi.autoSizeAllColumns();
-                                highlightFeatures();
+                                var startingSelection = getCurrentSelection();
+                                selectFeatures(startingSelection);
+                                // highlightFeatures();
                             },
                             onSelectionChanged: function (e) {
-                                selectFeatures();
+                                writeCurrentSelection();
                             }
                         };
                         let gridDiv = document.querySelector('#featuresTable');
@@ -205,14 +209,24 @@
                         spatialRelationship: 'contains'
                     }).then(function (ids) {
                         var current_selection = getCurrentSelection()
-                        var new_selection = remove ? current_selection.filter(id => !ids.includes(id)): Array.from(new Set(current_selection.concat(ids)));
+                        var new_selection = remove ? current_selection.filter(id => !ids.includes(id)) : Array.from(new Set(current_selection.concat(ids)));
                         gridOptions.api.forEachNode(function (node) {
                             node.setSelected(new_selection.includes(node.data.OBJECTID));
                         });
                     });
                 }
 
-                function selectFeatures() {
+                function selectFeatures(ids, remove) {
+                    var nodes = [];
+                    gridOptions.api.forEachNode(function (node) {
+                        if (ids.includes(node.data.OBJECTID)) {
+                            nodes.push(node);
+                        }
+                    });
+                    gridOptions.api.setNodesSelected({nodes, newValue: !remove});
+                }
+
+                function writeCurrentSelection() {
                     var new_selection = gridOptions.api.getSelectedRows().map(x => x.OBJECTID);
                     document.getElementById('id_selected_features').value = [...new_selection].join(',');
                     highlightFeatures();
