@@ -17,6 +17,14 @@ node {
             stage('run migrations') {
                 bat ".\\venv\\scripts\\activate && python manage.py migrate"
             }
+            stage('run collectstatic') {
+                bat ".\\venv\\scripts\\activate && python manage.py collectstatic --noinput"
+            }
+
+//             stage('bounce task runner') {
+//                 bat 'net stop "WET Task Runner"'
+//                 bat 'net start "WET Task Runner"'
+//             }
 
     //     dir('.\\frontend') {
     //         stage('update frontend dependencies') {
