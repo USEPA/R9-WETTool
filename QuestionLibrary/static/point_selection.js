@@ -158,8 +158,32 @@
                     //     todo - update layer list
                 }
 
+                async function getAllFeatures(featureLayer) {
+                    let allFeatureSet;
+                    let moreFeatures = true;
+                    let start = 0;
+                    let num = 1000;
+                    do {
+                        await featureLayer.queryFeatures({
+                            where: '1=1',
+                            "outFields": "*",
+                            start,
+                            num
+                        }).then(featureSet => {
+                            if (!allFeatureSet) {
+                                allFeatureSet = featureSet;
+                            } else {
+                                allFeatureSet.features = allFeatureSet.features.concat(featureSet.features);
+                            }
+                            moreFeatures = featureSet.exceededTransferLimit;
+                            start += num;
+                        });
+                    } while (moreFeatures);
+                    return allFeatureSet;
+                }
+
                 function getFeatures(featureLayer) {
-                    featureLayer.queryFeatures({"where": "1=1", "outFields": "*"}).then(function (featureSet) {
+                    getAllFeatures(featureLayer).then(function (featureSet) {
                         // todo: deal with getting more features if max returned
                         allFeatures = allFeatures.concat(featureSet.features);
                         var features = featureSet.features.map(f => f.attributes);
